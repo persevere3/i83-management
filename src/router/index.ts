@@ -54,7 +54,7 @@ export const constantRoutes: RouteRecordRaw[] = [
         component: () => import("@/views/dashboard/index.vue"),
         name: "Dashboard",
         meta: {
-          title: "首页",
+          title: "首頁",
           svgIcon: "dashboard",
           affix: true
         }
@@ -62,42 +62,40 @@ export const constantRoutes: RouteRecordRaw[] = [
     ]
   },
   {
-    path: "/unocss",
+    path: "/management",
     component: Layouts,
-    redirect: "/unocss/index",
-    children: [
-      {
-        path: "index",
-        component: () => import("@/views/unocss/index.vue"),
-        name: "UnoCSS",
-        meta: {
-          title: "UnoCSS",
-          svgIcon: "unocss"
-        }
-      }
-    ]
-  },
-  {
-    path: "/link",
+    redirect: "/management/index.vue",
+    name: "Management",
     meta: {
-      title: "外链",
-      svgIcon: "link"
+      title: "管理",
+      elIcon: "Grid"
     },
     children: [
       {
-        path: "https://juejin.cn/post/7089377403717287972",
-        component: () => {},
-        name: "Link1",
+        path: "category-list",
+        component: () => import("@/views/management/category-list/index.vue"),
+        name: "CategoryList",
         meta: {
-          title: "中文文档"
+          title: "分類管理",
+          keepAlive: true
         }
       },
       {
-        path: "https://juejin.cn/column/7207659644487139387",
-        component: () => {},
-        name: "Link2",
+        path: "meal-list",
+        component: () => import("@/views/management/category-list/index.vue"),
+        name: "MealList",
         meta: {
-          title: "新手教程"
+          title: "餐點管理",
+          keepAlive: true
+        }
+      },
+      {
+        path: "select-list",
+        component: () => import("@/views/management/category-list/index.vue"),
+        name: "SelectList",
+        meta: {
+          title: "選擇管理",
+          keepAlive: true
         }
       }
     ]
