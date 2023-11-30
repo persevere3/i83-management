@@ -1,0 +1,38 @@
+export interface CreateMealRequestData {
+  categoryList: string[]
+  mealName: string
+  origin: string
+  mealTextList: string[]
+  price: number
+}
+
+export interface UpdateMealRequestData {
+  categoryList: string[]
+  mealName: string
+  origin: string
+  mealTextList: string[]
+  price: number
+}
+
+export interface GetMealRequestData {
+  /** 当前页码 */
+  // currentPage: number
+  /** 查询条数 */
+  // size: number
+
+  /** 查询参数：分類名稱 */
+  mealName?: string
+}
+
+export interface GetMealData {
+  categoryList: string[]
+  mealName: string
+  origin: string
+  mealTextList: string[]
+  price: number
+}
+
+export type GetMealResponseData = ApiResponseData<{
+  list: GetMealData[]
+  total: number
+}>

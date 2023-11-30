@@ -82,7 +82,7 @@ export const constantRoutes: RouteRecordRaw[] = [
       },
       {
         path: "meal-list",
-        component: () => import("@/views/management/category-list/index.vue"),
+        component: () => import("@/views/management/meal-list/index.vue"),
         name: "MealList",
         meta: {
           title: "餐點管理",

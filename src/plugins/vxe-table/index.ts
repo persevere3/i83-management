@@ -24,7 +24,7 @@ VXETable.setup({
     // stripe: false,
     border: "inner",
     // round: false,
-    emptyText: "暂无数据",
+    emptyText: "暫無數據",
     rowConfig: {
       isHover: true,
       isCurrent: true
