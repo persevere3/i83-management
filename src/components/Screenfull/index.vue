@@ -31,7 +31,7 @@ const fullscreenSvgName = computed(() => {
 })
 const handleFullscreenClick = () => {
   const dom = document.querySelector(props.element) || undefined
-  screenfull.isEnabled ? screenfull.toggle(dom) : ElMessage.warning("您的浏览器无法工作")
+  screenfull.isEnabled ? screenfull.toggle(dom) : ElMessage.warning("您的瀏覽器無法工作")
 }
 const handleFullscreenChange = () => {
   isFullscreen.value = screenfull.isFullscreen
@@ -49,7 +49,7 @@ watchEffect((onCleanup) => {
 //#region 内容区
 const isContentLarge = ref<boolean>(false)
 const contentLargeTips = computed(() => {
-  return isContentLarge.value ? "内容区复原" : "内容区放大"
+  return isContentLarge.value ? "内容區復原" : "内容區放大"
 })
 const contentLargeSvgName = computed(() => {
   return isContentLarge.value ? "fullscreen-exit" : "fullscreen"
@@ -75,7 +75,7 @@ const handleContentLargeClick = () => {
           <!-- 内容区放大 -->
           <el-dropdown-item @click="handleContentLargeClick">{{ contentLargeTips }}</el-dropdown-item>
           <!-- 内容区全屏 -->
-          <el-dropdown-item @click="handleFullscreenClick" :disabled="isFullscreen">内容区全屏</el-dropdown-item>
+          <el-dropdown-item @click="handleFullscreenClick" :disabled="isFullscreen">内容區全屏</el-dropdown-item>
         </el-dropdown-menu>
       </template>
     </el-dropdown>

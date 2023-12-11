@@ -1,8 +1,12 @@
 <script lang="ts" setup>
 import { reactive, ref, watch, onMounted } from "vue"
 
+import { storeToRefs } from "pinia"
+
 // import { createTableDataApi, deleteTableDataApi, updateTableDataApi, getTableDataApi } from "@/api/table"
 import { type GetCategoryData } from "@/api/category-list/types/category"
+
+import { useMealsStore } from "@/store/modules/meals"
 
 import { type FormInstance, type FormRules, type TableInstance, ElMessage, ElMessageBox } from "element-plus"
 import { Search, Refresh, CirclePlus, Delete, RefreshRight } from "@element-plus/icons-vue"
@@ -17,15 +21,25 @@ defineOptions({
   name: "CategoryList"
 })
 
+const { mealListData } = storeToRefs(useMealsStore())
+const { getMealData } = useMealsStore()
+
+getMealData()
+
 const loading = ref<boolean>(false)
 const { paginationData, handleCurrentChange, handleSizeChange } = usePagination()
 
 //#region 增
 const dialogVisible = ref<boolean>(false)
 const formRef = ref<FormInstance | null>(null)
-const formData = reactive({
+const formData = reactive<{
+  categoryName: string
+  categoryText: string
+  categoryMeals: string[]
+}>({
   categoryName: "",
-  categoryText: ""
+  categoryText: "",
+  categoryMeals: []
 })
 const formRules: FormRules = reactive({
   categoryName: [{ required: true, trigger: "blur", message: "请输入類別名稱" }],
@@ -37,6 +51,15 @@ const handleCreate = () => {
     if (valid) {
       if (currentUpdateId.value === undefined) {
         categoryListData.value.push(JSON.parse(JSON.stringify(formData)))
+
+        mealListData.value.forEach((meal) => {
+          const formDataIndex = formData.categoryMeals.indexOf(meal.mealName)
+          // 餐點在分類中
+          if (formDataIndex > -1) {
+            meal.categoryList.push(formData.categoryName)
+          }
+        })
+
         ElMessage.success("新增成功")
         getCategoryData()
         dialogVisible.value = false
@@ -52,6 +75,22 @@ const handleCreate = () => {
       } else {
         const index = categoryListData.value.findIndex((item) => item.categoryName === currentUpdateId.value)
         index > -1 ? (categoryListData.value[index] = JSON.parse(JSON.stringify(formData))) : null
+
+        mealListData.value.forEach((meal) => {
+          const formDataIndex = formData.categoryMeals.indexOf(meal.mealName)
+          const mealIndex = meal.categoryList.indexOf(formData.categoryName)
+          // 餐點在分類中
+          if (formDataIndex > -1) {
+            // 餐點沒有標記此分類
+            if (mealIndex < 0) {
+              meal.categoryList.push(formData.categoryName)
+            }
+          } else {
+            if (mealIndex > -1) {
+              meal.categoryList.splice(mealIndex, 1)
+            }
+          }
+        })
         ElMessage.success("修改成功")
         getCategoryData()
         dialogVisible.value = false
@@ -77,6 +116,7 @@ const resetForm = () => {
   currentUpdateId.value = undefined
   formData.categoryName = ""
   formData.categoryText = ""
+  formData.categoryMeals = []
   formRef.value?.resetFields()
 }
 //#endregion
@@ -120,6 +160,9 @@ const handleUpdate = (row: GetCategoryData) => {
   currentUpdateId.value = row.categoryName
   formData.categoryName = row.categoryName
   formData.categoryText = row.categoryText
+  formData.categoryMeals = mealListData.value
+    .filter((item) => item.categoryList.includes(formData.categoryName))
+    .map((item) => item.mealName)
   dialogVisible.value = true
 }
 //#endregion
@@ -282,7 +325,7 @@ watch([() => paginationData.currentPage, () => paginationData.pageSize], getCate
       v-model="dialogVisible"
       :title="currentUpdateId === undefined ? '新增分類' : '修改分類'"
       @close="resetForm"
-      width="30%"
+      width="35%"
     >
       <el-form ref="formRef" :model="formData" :rules="formRules" label-width="100px" label-position="left">
         <el-form-item prop="categoryName" label="分類名稱">
@@ -290,6 +333,16 @@ watch([() => paginationData.currentPage, () => paginationData.pageSize], getCate
         </el-form-item>
         <el-form-item prop="categoryText" label="分類說明">
           <el-input v-model="formData.categoryText" placeholder="请输入分類說明" />
+        </el-form-item>
+        <el-form-item prop="" label="分類餐點">
+          <el-select v-model="formData.categoryMeals" multiple placeholder="分類餐點" style="width: 100%">
+            <el-option
+              v-for="item in mealListData"
+              :key="item.mealName"
+              :label="item.mealName"
+              :value="item.mealName"
+            />
+          </el-select>
         </el-form-item>
       </el-form>
       <template #footer>

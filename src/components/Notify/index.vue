@@ -39,14 +39,14 @@ const data = ref<DataItem[]>([
   },
   // 待办数据
   {
-    name: "待办",
+    name: "待辦",
     type: "warning",
     list: todoData
   }
 ])
 
 const handleHistory = () => {
-  ElMessage.success(`跳转到${activeName.value}历史页面`)
+  ElMessage.success(`跳轉到${activeName.value}歷史頁面`)
 }
 </script>
 
@@ -75,7 +75,7 @@ const handleHistory = () => {
           </el-tab-pane>
         </el-tabs>
         <div class="notify-history">
-          <el-button link @click="handleHistory">查看{{ activeName }}历史</el-button>
+          <el-button link @click="handleHistory">查看{{ activeName }}歷史</el-button>
         </div>
       </template>
     </el-popover>

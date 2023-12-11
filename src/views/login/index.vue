@@ -25,12 +25,12 @@ const loginFormData: LoginRequestData = reactive({
 })
 /** 登录表单校验规则 */
 const loginFormRules: FormRules = {
-  username: [{ required: true, message: "请输入用户名", trigger: "blur" }],
+  username: [{ required: true, message: "請輸入用戶名", trigger: "blur" }],
   password: [
-    { required: true, message: "请输入密码", trigger: "blur" },
-    { min: 8, max: 16, message: "长度在 8 到 16 个字符", trigger: "blur" }
+    { required: true, message: "請輸入密碼", trigger: "blur" },
+    { min: 8, max: 16, message: "長度在 8 - 16 個字符", trigger: "blur" }
   ],
-  code: [{ required: true, message: "请输入验证码", trigger: "blur" }]
+  code: [{ required: true, message: "請輸入驗證碼", trigger: "blur" }]
 }
 /** 登录逻辑 */
 const handleLogin = () => {
@@ -50,7 +50,7 @@ const handleLogin = () => {
           loading.value = false
         })
     } else {
-      console.error("表单校验不通过", fields)
+      console.error("表單驗證不通過", fields)
     }
   })
 }
@@ -74,14 +74,15 @@ createCode()
     <ThemeSwitch class="theme-switch" />
     <div class="login-card">
       <div class="title">
-        <img src="@/assets/layouts/logo-text-2.png" />
+        <img src="@/assets/layouts/logo.png" />
+        <!-- <img src="@/assets/layouts/logo-text-2.png" /> -->
       </div>
       <div class="content">
         <el-form ref="loginFormRef" :model="loginFormData" :rules="loginFormRules" @keyup.enter="handleLogin">
           <el-form-item prop="username">
             <el-input
               v-model.trim="loginFormData.username"
-              placeholder="用户名"
+              placeholder="用戶名"
               type="text"
               tabindex="1"
               :prefix-icon="User"
@@ -91,7 +92,7 @@ createCode()
           <el-form-item prop="password">
             <el-input
               v-model.trim="loginFormData.password"
-              placeholder="密码"
+              placeholder="密碼"
               type="password"
               tabindex="2"
               :prefix-icon="Lock"
@@ -102,7 +103,7 @@ createCode()
           <el-form-item prop="code">
             <el-input
               v-model.trim="loginFormData.code"
-              placeholder="验证码"
+              placeholder="驗證碼"
               type="text"
               tabindex="3"
               :prefix-icon="Key"
@@ -125,7 +126,7 @@ createCode()
               </template>
             </el-input>
           </el-form-item>
-          <el-button :loading="loading" type="primary" size="large" @click.prevent="handleLogin">登 录</el-button>
+          <el-button :loading="loading" type="primary" size="large" @click.prevent="handleLogin">登 入</el-button>
         </el-form>
       </div>
     </div>
