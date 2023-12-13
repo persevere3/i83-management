@@ -11,7 +11,7 @@ export function createMealDataApi(data: Meal.CreateMealRequestData) {
 }
 
 /** 删 */
-export function deleteTableDataApi(id: string) {
+export function deleteMealDataApi(id: string) {
   return request({
     url: `table/${id}`,
     method: "delete"
@@ -19,7 +19,7 @@ export function deleteTableDataApi(id: string) {
 }
 
 /** 改 */
-export function updateTableDataApi(data: Meal.UpdateMealRequestData) {
+export function updateMealDataApi(data: Meal.UpdateMealRequestData) {
   return request({
     url: "table",
     method: "put",
@@ -28,7 +28,7 @@ export function updateTableDataApi(data: Meal.UpdateMealRequestData) {
 }
 
 /** 查 */
-export function getTableDataApi(params: Meal.GetMealRequestData) {
+export function getMealDataApi(params: Meal.GetMealRequestData) {
   // Meal.GetMealResponseData ???
   return request<Meal.GetMealResponseData>({
     url: "table",

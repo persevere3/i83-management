@@ -1,8 +1,16 @@
+interface Select {
+  selectName: string
+  showOptionList: string[]
+  max: number
+  min: number
+}
+
 export interface CreateMealRequestData {
   categoryList: string[]
   mealName: string
   origin: string
   mealTextList: string[]
+  selectList?: Select[]
   price: number
 }
 
@@ -11,6 +19,7 @@ export interface UpdateMealRequestData {
   mealName: string
   origin: string
   mealTextList: string[]
+  selectList?: Select[]
   price: number
 }
 
@@ -29,6 +38,7 @@ export interface GetMealData {
   mealName: string
   origin: string
   mealTextList: string[]
+  selectList?: Select[]
   price: number
 }
 

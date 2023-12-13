@@ -42,6 +42,32 @@ export const useMealsStore = defineStore("meals", () => {
             mealName: "沙朗牛排5oz",
             origin: "巴拉圭",
             mealTextList: ["醬料擇一", "含義大利麵、蛋、蔬菜"],
+            selectList: [
+              {
+                selectName: "醬料",
+                showOptionList: ["黑胡椒醬", "蘑菇醬", "綜合醬"],
+                max: 1,
+                min: 1
+              },
+              {
+                selectName: "熟度",
+                showOptionList: ["牛-五分熟", "牛-七分熟", "牛-全熟"],
+                max: 1,
+                min: 1
+              },
+              {
+                selectName: "肉類",
+                showOptionList: ["豬", "雞"],
+                max: 1,
+                min: 1
+              },
+              {
+                selectName: "客製化",
+                showOptionList: ["麵換蛋", "麵換菜"],
+                max: 1,
+                min: 0
+              }
+            ],
             price: 200
           },
           {

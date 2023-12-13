@@ -7,6 +7,7 @@ import { storeToRefs } from "pinia"
 import { type GetMealData } from "@/api/meal-list/types/meal"
 
 import { useMealsStore } from "@/store/modules/meals"
+import { useSelectsStore } from "@/store/modules/selects"
 
 import { type FormInstance, type FormRules, type TableInstance, ElMessage, ElMessageBox } from "element-plus"
 import { Search, Refresh, CirclePlus, Delete, RefreshRight, Plus } from "@element-plus/icons-vue"
@@ -21,24 +22,38 @@ defineOptions({
 
 const { loading } = storeToRefs(useMealsStore())
 
+const { selectListData } = storeToRefs(useSelectsStore())
+const { getSelectData } = useSelectsStore()
+
+getSelectData()
+
 const { paginationData, handleCurrentChange, handleSizeChange } = usePagination()
 
 //#region 增
 const dialogVisible = ref<boolean>(false)
 const formRef = ref<FormInstance | null>(null)
+interface Select {
+  selectName: string
+  showOptionList: string[]
+  max: number
+  min: number
+}
 const formData = reactive<{
   categoryList: string[]
   mealName: string
   origin: string
   mealTextList: string[]
+  selectList: Select[]
   price: number
 }>({
   categoryList: [],
   mealName: "",
   origin: "",
   mealTextList: [],
+  selectList: [],
   price: 0
 })
+const formDataSelectList = ref<string[]>([])
 const formRules: FormRules = reactive({
   mealName: [{ required: true, trigger: "blur", message: "请输入餐點名稱" }],
   origin: [{ required: false, trigger: "blur", message: "请输入肉品來源" }],
@@ -91,21 +106,67 @@ const handleCreate = () => {
     }
   })
 }
-
 const setForm = () => {
+  // 新增餐點
+  if (!currentUpdateId.value) {
+    formData.categoryList = []
+    formData.mealName = ""
+    formData.origin = ""
+    formData.mealTextList = []
+    formData.price = 0
+  }
+
   // 新增餐點 && 選中某分類
   if (!currentUpdateId.value && activeCategory.value !== "全部") {
     formData.categoryList[0] = activeCategory.value
   }
 }
-
 const resetForm = () => {
   currentUpdateId.value = undefined
-  formData.categoryList = []
-  formData.mealName = ""
-  formData.origin = ""
-  formData.mealTextList = []
-  formData.price = 0
+  formRef.value?.resetFields()
+}
+//#endregion
+
+//#region 選擇
+const selectDialogVisible = ref<boolean>(false)
+
+const batchSelect = () => {
+  const selections = tableRef.value?.getSelectionRows()
+  if (!selections.length) return
+
+  selectDialogVisible.value = true
+}
+const handleSelect = (row: GetMealData) => {
+  currentUpdateId.value = row.mealName
+  formData.mealName = row.mealName
+  formDataSelectList.value = JSON.parse(JSON.stringify(row.selectList?.map((select) => select.selectName) || []))
+  selectDialogVisible.value = true
+}
+const confirmSelect = () => {
+  if (currentUpdateId.value) {
+    const meal = mealListData.value.find((meal) => meal.mealName === currentUpdateId.value)
+    if (meal) meal.selectList = JSON.parse(JSON.stringify(formData.selectList))
+    ElMessage.success("修改選擇成功")
+  } else {
+    const selections = tableRef.value?.getSelectionRows()
+    selections.forEach((element: GetMealData) => {
+      element.selectList = JSON.parse(JSON.stringify(formData.selectList))
+    })
+    ElMessage.success("批量添加選擇成功")
+  }
+
+  getMealData()
+  selectDialogVisible.value = false
+}
+const setSelectForm = () => {
+  // 批量添加選擇
+  if (!currentUpdateId.value) {
+    formData.mealName = ""
+    formDataSelectList.value = []
+  }
+}
+const resetSelectForm = () => {
+  currentUpdateId.value = undefined
   formRef.value?.resetFields()
 }
 //#endregion
@@ -199,6 +260,25 @@ const filterMealListData = computed<GetMealData[]>(() => {
 /** 监听分页参数的变化 */
 watch([() => paginationData.currentPage, () => paginationData.pageSize], getMealData, { immediate: true })
 
+watch(formDataSelectList, (list) => {
+  const newSelectList: Select[] = []
+  list.forEach((item) => {
+    const meal = mealListData.value.find((meal) => meal.mealName === formData.mealName)
+    const mealSelect = meal?.selectList?.find((select) => select.selectName === item)
+    if (mealSelect) {
+      newSelectList.push(JSON.parse(JSON.stringify(mealSelect)))
+    } else {
+      newSelectList.push({
+        selectName: item,
+        showOptionList: selectListData.value.find((select) => select.selectName === item)?.optionList || [],
+        max: 1,
+        min: 1
+      })
+    }
+  })
+
+  formData.selectList = JSON.parse(JSON.stringify(newSelectList))
+})
 watch(mealListData, () => {
   paginationData.total = mealListData.value.length
 })
@@ -221,6 +301,7 @@ watch(mealListData, () => {
       <div class="toolbar-wrapper">
         <div>
           <el-button type="primary" :icon="CirclePlus" @click="dialogVisible = true">新增餐點</el-button>
+          <el-button type="primary" :icon="Delete" @click="batchSelect()">批量添加選擇</el-button>
           <el-button type="danger" :icon="Delete" @click="batchDelete()">批量刪除</el-button>
         </div>
         <div>
@@ -264,16 +345,17 @@ watch(mealListData, () => {
               <div v-for="item in scope.row.mealTextList" :key="item">{{ item }}</div>
             </template>
           </el-table-column>
-          <el-table-column prop="price" label="價錢" align="center" />
+          <el-table-column prop="price" label="價錢" width="120" align="center" />
           <el-table-column prop="status" label="狀態" width="80" align="center">
             <template #default="scope">
               <el-tag v-if="!scope.row.isShow" type="success" effect="plain">啟用</el-tag>
               <el-tag v-else type="danger" effect="plain">禁用</el-tag>
             </template>
           </el-table-column>
-          <el-table-column fixed="right" label="操作" width="150" align="center">
+          <el-table-column fixed="right" label="操作" width="200" align="center">
             <template #default="scope">
               <el-button type="primary" text bg size="small" @click="handleUpdate(scope.row)">修改</el-button>
+              <el-button type="primary" text bg size="small" @click="handleSelect(scope.row)">選擇</el-button>
               <el-button type="danger" text bg size="small" @click="handleDelete(scope.row)">删除</el-button>
             </template>
           </el-table-column>
@@ -329,6 +411,55 @@ watch(mealListData, () => {
         <el-button type="primary" @click="handleCreate">確認</el-button>
       </template>
     </el-dialog>
+
+    <!-- 新增/修改 選擇 -->
+    <el-dialog
+      v-model="selectDialogVisible"
+      :title="currentUpdateId === undefined ? '批量添加選擇' : '修改選擇'"
+      @open="setSelectForm"
+      @close="resetSelectForm"
+      width="40%"
+    >
+      <el-form ref="formRef" :model="formData" :rules="formRules" label-width="100px" label-position="left">
+        <el-form-item v-if="formData.mealName" prop="mealName" label="餐點名稱">
+          <el-input v-model="formData.mealName" disabled />
+        </el-form-item>
+        <el-form-item prop="" label="選擇">
+          <el-select v-model="formDataSelectList" multiple placeholder="選擇" style="width: 100%">
+            <el-option
+              v-for="item in selectListData"
+              :key="item.selectName"
+              :label="item.selectName"
+              :value="item.selectName"
+            />
+          </el-select>
+        </el-form-item>
+        <template v-for="item in formData.selectList" :key="item.selectName">
+          <el-form-item :prop="item.selectName" :label="item.selectName">
+            <el-checkbox-group v-model="item.showOptionList">
+              <el-checkbox
+                v-for="option in selectListData.find((select) => select.selectName === item.selectName)?.optionList"
+                :key="option"
+                :label="option"
+              />
+            </el-checkbox-group>
+
+            <div class="mt-3">
+              最少選擇
+              <el-input-number class="mx-1" v-model="item.min" :min="0" :max="item.max" /> 項
+            </div>
+            <div class="mt-3">
+              最多選擇
+              <el-input-number class="mx-1" v-model="item.max" :min="1" :max="item.showOptionList.length" /> 項
+            </div>
+          </el-form-item>
+        </template>
+      </el-form>
+      <template #footer>
+        <el-button @click="selectDialogVisible = false">取消</el-button>
+        <el-button type="primary" @click="confirmSelect">確認</el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
@@ -361,5 +492,15 @@ watch(mealListData, () => {
   margin: 0 auto;
   background-size: cover;
   background-position: center;
+}
+
+.el-form-item__content {
+  div + button {
+    margin-top: 5px;
+  }
+}
+
+.el-checkbox-group {
+  width: 100%;
 }
 </style>

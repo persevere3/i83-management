@@ -91,7 +91,7 @@ export const constantRoutes: RouteRecordRaw[] = [
       },
       {
         path: "select-list",
-        component: () => import("@/views/management/category-list/index.vue"),
+        component: () => import("@/views/management/select-list/index.vue"),
         name: "SelectList",
         meta: {
           title: "選擇管理",
