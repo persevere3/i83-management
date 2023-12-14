@@ -97,6 +97,15 @@ export const constantRoutes: RouteRecordRaw[] = [
           title: "選擇管理",
           keepAlive: true
         }
+      },
+      {
+        path: "order-list",
+        component: () => import("@/views/management/order-list/index.vue"),
+        name: "OrdertList",
+        meta: {
+          title: "訂單管理",
+          keepAlive: true
+        }
       }
     ]
   }

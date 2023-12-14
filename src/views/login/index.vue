@@ -74,8 +74,7 @@ createCode()
     <ThemeSwitch class="theme-switch" />
     <div class="login-card">
       <div class="title">
-        <img src="@/assets/layouts/logo.png" />
-        <!-- <img src="@/assets/layouts/logo-text-2.png" /> -->
+        <img src="@/assets/layouts/logo-text-light.png" />
       </div>
       <div class="content">
         <el-form ref="loginFormRef" :model="loginFormData" :rules="loginFormRules" @keyup.enter="handleLogin">

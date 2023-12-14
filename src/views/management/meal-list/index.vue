@@ -14,6 +14,7 @@ import { Search, Refresh, CirclePlus, Delete, RefreshRight, Plus } from "@elemen
 // import { Search, Refresh, CirclePlus, Delete, Download, RefreshRight } from "@element-plus/icons-vue"
 
 import { usePagination } from "@/hooks/usePagination"
+import { useNumberFormat } from "@/hooks/useNumberFormat"
 
 defineOptions({
   // 命名当前组件
@@ -28,6 +29,8 @@ const { getSelectData } = useSelectsStore()
 getSelectData()
 
 const { paginationData, handleCurrentChange, handleSizeChange } = usePagination()
+
+const { thousandsSeparatorFormat } = useNumberFormat()
 
 //#region 增
 const dialogVisible = ref<boolean>(false)
@@ -301,7 +304,7 @@ watch(mealListData, () => {
       <div class="toolbar-wrapper">
         <div>
           <el-button type="primary" :icon="CirclePlus" @click="dialogVisible = true">新增餐點</el-button>
-          <el-button type="primary" :icon="Delete" @click="batchSelect()">批量添加選擇</el-button>
+          <el-button type="warning" :icon="Delete" @click="batchSelect()">批量添加選擇</el-button>
           <el-button type="danger" :icon="Delete" @click="batchDelete()">批量刪除</el-button>
         </div>
         <div>
@@ -345,7 +348,9 @@ watch(mealListData, () => {
               <div v-for="item in scope.row.mealTextList" :key="item">{{ item }}</div>
             </template>
           </el-table-column>
-          <el-table-column prop="price" label="價錢" width="120" align="center" />
+          <el-table-column label="價錢" width="100" align="center">
+            <template #default="scope"> {{ thousandsSeparatorFormat(scope.row.price) }} </template>
+          </el-table-column>
           <el-table-column prop="status" label="狀態" width="80" align="center">
             <template #default="scope">
               <el-tag v-if="!scope.row.isShow" type="success" effect="plain">啟用</el-tag>
@@ -355,7 +360,7 @@ watch(mealListData, () => {
           <el-table-column fixed="right" label="操作" width="200" align="center">
             <template #default="scope">
               <el-button type="primary" text bg size="small" @click="handleUpdate(scope.row)">修改</el-button>
-              <el-button type="primary" text bg size="small" @click="handleSelect(scope.row)">選擇</el-button>
+              <el-button type="warning" text bg size="small" @click="handleSelect(scope.row)">選擇</el-button>
               <el-button type="danger" text bg size="small" @click="handleDelete(scope.row)">删除</el-button>
             </template>
           </el-table-column>

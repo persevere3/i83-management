@@ -68,7 +68,7 @@ export const useMealsStore = defineStore("meals", () => {
                 min: 0
               }
             ],
-            price: 200
+            price: 1600
           },
           {
             categoryList: ["單打獨鬥區"],

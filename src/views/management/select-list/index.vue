@@ -204,12 +204,6 @@ watch([() => paginationData.currentPage, () => paginationData.pageSize], getSele
               >
             </template>
           </el-table-column>
-          <el-table-column prop="status" label="狀態" align="center">
-            <template #default="scope">
-              <el-tag v-if="!scope.row.isShow" type="success" effect="plain">啟用</el-tag>
-              <el-tag v-else type="danger" effect="plain">禁用</el-tag>
-            </template>
-          </el-table-column>
           <el-table-column fixed="right" label="操作" width="150" align="center">
             <template #default="scope">
               <el-button type="primary" text bg size="small" @click="handleUpdate(scope.row)">修改</el-button>

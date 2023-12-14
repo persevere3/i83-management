@@ -1,3 +1,8 @@
+// interface option {
+//   optionName: string
+//   optionPrice: number
+// }
+
 interface Select {
   selectName: string
   showOptionList: string[]
