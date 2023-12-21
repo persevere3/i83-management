@@ -4,14 +4,29 @@ import { reactive, ref, watch, computed } from "vue"
 import { storeToRefs } from "pinia"
 
 // import { createTableDataApi, deleteTableDataApi, updateTableDataApi, getTableDataApi } from "@/api/table"
-import { type GetMealData } from "@/api/meal-list/types/meal"
+import { type GetMealData, CreateMealRequestData } from "@/api/meal-list/types/meal"
+import { createMealDataApi, deleteMealDataApi } from "@/api/meal-list"
 
 import { useMealsStore } from "@/store/modules/meals"
 import { useSelectsStore } from "@/store/modules/selects"
 
 import { type FormInstance, type FormRules, type TableInstance, ElMessage, ElMessageBox } from "element-plus"
-import { Search, Refresh, CirclePlus, Delete, RefreshRight, Plus } from "@element-plus/icons-vue"
+import { Refresh, CirclePlus, Delete, RefreshRight, Plus } from "@element-plus/icons-vue"
 // import { Search, Refresh, CirclePlus, Delete, Download, RefreshRight } from "@element-plus/icons-vue"
+
+//#region upload
+import { genFileId } from "element-plus"
+import type { UploadInstance, UploadProps, UploadRawFile } from "element-plus"
+
+const upload = ref<UploadInstance>()
+
+const handleExceed: UploadProps["onExceed"] = (files) => {
+  upload.value!.clearFiles()
+  const file = files[0] as UploadRawFile
+  file.uid = genFileId()
+  upload.value!.handleStart(file)
+}
+//#endregion
 
 import { usePagination } from "@/hooks/usePagination"
 import { useNumberFormat } from "@/hooks/useNumberFormat"
@@ -56,6 +71,7 @@ const formData = reactive<{
   selectList: [],
   price: 0
 })
+const image = ref<string>("")
 const formDataSelectList = ref<string[]>([])
 const formRules: FormRules = reactive({
   mealName: [{ required: true, trigger: "blur", message: "请输入餐點名稱" }],
@@ -66,6 +82,7 @@ const formRules: FormRules = reactive({
 const addFormDataMealText = () => {
   formData.mealTextList.push("")
 }
+
 const handleCreate = () => {
   formData.mealTextList = formData.mealTextList.filter((item) => item)
   // fields ???
@@ -76,15 +93,32 @@ const handleCreate = () => {
         ElMessage.success("新增成功")
         getMealData()
         dialogVisible.value = false
-
-        // createTableDataApi(formData)
-        //   .then(() => {
-        //     ElMessage.success("新增成功")
-        //     getTableData()
-        //   })
-        //   .finally(() => {
-        //     dialogVisible.value = false
-        //   })
+        // api ==================================================
+        const createMealData: CreateMealRequestData = {
+          id: 0,
+          // Categorys: [1, 2],
+          mealName: "板腱牛",
+          file: image.value,
+          // Image: ''
+          // Origin: '美國'
+          // SelectList: ''
+          mealTextList: ["醬料擇一", "含義大利麵，蛋，蔬菜"],
+          price: 200
+          // Count: 50,
+          // Enable: 1
+        }
+        const createMealFormData = new FormData()
+        for (const [key, value] of Object.entries(createMealData)) {
+          if (Array.isArray(value)) createMealFormData.append(key, JSON.stringify(value))
+          else createMealFormData.append(key, value)
+        }
+        createMealDataApi(createMealFormData)
+          .then(() => {
+            ElMessage.success("新增成功")
+          })
+          .finally(() => {
+            dialogVisible.value = false
+          })
       } else {
         const index = mealListData.value.findIndex((item) => item.mealName === currentUpdateId.value)
         index > -1 ? (mealListData.value[index] = JSON.parse(JSON.stringify(formData))) : null
@@ -110,6 +144,14 @@ const handleCreate = () => {
   })
 }
 const setForm = () => {
+  document.querySelector("input[type=file]")?.addEventListener("change", (event: any) => {
+    image.value = event.target.files[0]
+    // const reader = new FileReader()
+    // reader.readAsDataURL(event.target.files[0])
+    // reader.onload = function () {
+    //   image.value = reader.result
+    // }
+  })
   // 新增餐點
   if (!currentUpdateId.value) {
     formData.categoryList = []
@@ -193,6 +235,14 @@ const handleDelete = (row: GetMealData) => {
   })
 }
 
+const testDeleteApi = () => {
+  deleteMealDataApi(54)
+    .then(() => {
+      ElMessage.success("刪除成功")
+    })
+    .finally(() => {})
+}
+
 const tableRef = ref<TableInstance | null>(null)
 const batchDelete = () => {
   const selections = tableRef.value?.getSelectionRows()
@@ -235,15 +285,43 @@ const handleUpdate = (row: GetMealData) => {
   formData.price = row.price
   dialogVisible.value = true
 }
+
+const testUpdateApi = () => {
+  // api ==================================================
+  const createMealData: CreateMealRequestData = {
+    id: 0,
+    // Categorys: [1, 2],
+    mealName: "板腱牛",
+    file: image.value,
+    // Image: ''
+    // Origin: '美國'
+    // SelectList: ''
+    // MealTextList: ''
+    price: 200
+    // Count: 50,
+    // Enable: 1
+  }
+  const createMealFormData = new FormData()
+  for (const [key, value] of Object.entries(createMealData)) {
+    createMealFormData.append(key, value)
+  }
+  // updateMealDataApi(createMealFormData)
+  //   .then(() => {
+  //     ElMessage.success("修改成功")
+  //   })
+  //   .finally(() => {})
+}
 //#endregion
 
 //#region 查
+const { mealListData } = storeToRefs(useMealsStore())
+const { getMealData } = useMealsStore()
+
 const searchFormRef = ref<FormInstance | null>(null)
 const searchData = reactive({
   mealName: ""
 })
-const { mealListData } = storeToRefs(useMealsStore())
-const { getMealData } = useMealsStore()
+
 const handleSearch = () => {
   paginationData.currentPage === 1 ? getMealData() : (paginationData.currentPage = 1)
 }
@@ -255,8 +333,11 @@ const resetSearch = () => {
 const categoryList = reactive(["全部", "人氣精選", "單打獨鬥區", "咖哩飯", "分進合擊區", "米食區", "游擊區"])
 const activeCategory = ref("全部")
 const filterMealListData = computed<GetMealData[]>(() => {
-  if (activeCategory.value === "全部") return mealListData.value
-  else return mealListData.value.filter((item) => item.categoryList.find((item2) => item2 === activeCategory.value))
+  let list: GetMealData[]
+  if (activeCategory.value === "全部") list = mealListData.value
+  else list = mealListData.value.filter((item) => item.categoryList.find((item2) => item2 === activeCategory.value))
+  list = list.filter((item) => item.mealName.indexOf(searchData.mealName) > -1)
+  return list
 })
 //#endregion
 
@@ -295,7 +376,6 @@ watch(mealListData, () => {
           <el-input v-model="searchData.mealName" placeholder="請輸入餐點名稱" />
         </el-form-item>
         <el-form-item>
-          <el-button type="primary" :icon="Search" @click="handleSearch">查詢</el-button>
           <el-button :icon="Refresh" @click="resetSearch">重置</el-button>
         </el-form-item>
       </el-form>
@@ -306,6 +386,8 @@ watch(mealListData, () => {
           <el-button type="primary" :icon="CirclePlus" @click="dialogVisible = true">新增餐點</el-button>
           <el-button type="warning" :icon="Delete" @click="batchSelect()">批量添加選擇</el-button>
           <el-button type="danger" :icon="Delete" @click="batchDelete()">批量刪除</el-button>
+          <el-button type="danger" :icon="Delete" @click="testDeleteApi()">test刪除</el-button>
+          <el-button type="danger" :icon="Delete" @click="testUpdateApi()">test修改</el-button>
         </div>
         <div>
           <!-- <el-tooltip content="下载">
@@ -395,6 +477,20 @@ watch(mealListData, () => {
         </el-form-item>
         <el-form-item prop="mealName" label="餐點名稱">
           <el-input v-model="formData.mealName" placeholder="请输入餐點名稱" />
+        </el-form-item>
+        <el-form-item>
+          <el-upload
+            ref="uploadRef"
+            accept="image/jpg,image/jpeg,image/png"
+            :limit="1"
+            :on-exceed="handleExceed"
+            :auto-upload="false"
+          >
+            <el-button type="primary">select file</el-button>
+            <template #tip>
+              <div class="el-upload__tip text-red">limit 1 file, new file will cover the old file</div>
+            </template>
+          </el-upload>
         </el-form-item>
         <el-form-item prop="origin" label="肉品來源">
           <el-input v-model="formData.origin" placeholder="请输入肉品來源" />

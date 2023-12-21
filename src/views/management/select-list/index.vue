@@ -9,7 +9,7 @@ import { type GetSelectData } from "@/api/select-list/types/select"
 import { useSelectsStore } from "@/store/modules/selects"
 
 import { type FormInstance, type FormRules, type TableInstance, ElMessage, ElMessageBox } from "element-plus"
-import { Search, Refresh, CirclePlus, Delete, RefreshRight, Plus } from "@element-plus/icons-vue"
+import { Refresh, CirclePlus, Delete, RefreshRight, Plus } from "@element-plus/icons-vue"
 // import { Search, Refresh, CirclePlus, Delete, Download, RefreshRight } from "@element-plus/icons-vue"
 
 import { usePagination } from "@/hooks/usePagination"
@@ -172,7 +172,6 @@ watch([() => paginationData.currentPage, () => paginationData.pageSize], getSele
           <el-input v-model="searchData.selectName" placeholder="請輸入選擇名稱" />
         </el-form-item>
         <el-form-item>
-          <el-button type="primary" :icon="Search" @click="handleSearch">查詢</el-button>
           <el-button :icon="Refresh" @click="resetSearch">重置</el-button>
         </el-form-item>
       </el-form>

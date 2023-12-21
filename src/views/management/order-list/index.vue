@@ -1,14 +1,16 @@
 <script lang="ts" setup>
 import { reactive, ref, watch } from "vue"
 
-// import { storeToRefs } from "pinia"
+import { storeToRefs } from "pinia"
 
 // import { createTableDataApi, deleteTableDataApi, updateTableDataApi, getTableDataApi } from "@/api/table"
 import { type GetOrderData } from "@/api/order-list/types/order"
 
+import { useOrdersStore } from "@/store/modules/orders"
+
 import { type FormInstance, type TableInstance, ElMessage, ElMessageBox } from "element-plus"
 // import { type FormInstance, type FormRules, type TableInstance, ElMessage, ElMessageBox } from "element-plus"
-import { Search, Refresh, Delete, RefreshRight } from "@element-plus/icons-vue"
+import { Refresh, Delete, RefreshRight } from "@element-plus/icons-vue"
 // import { Search, Refresh, CirclePlus, Delete, Download, RefreshRight } from "@element-plus/icons-vue"
 
 import { usePagination } from "@/hooks/usePagination"
@@ -58,141 +60,13 @@ const batchDelete = () => {
 //#endregion
 
 //#region 查
-const orderListData = ref<GetOrderData[]>([])
+const { orderListData } = storeToRefs(useOrdersStore())
+const { getOrderData } = useOrdersStore()
+
 const searchFormRef = ref<FormInstance | null>(null)
 const searchData = reactive({
   id: ""
 })
-const getOrderData = () => {
-  loading.value = true
-  !orderListData.value.length
-    ? (orderListData.value = [
-        {
-          id: "AE1695368516314274",
-          mealList: [
-            {
-              mealName: "海陸雙拼",
-              price: 300,
-              quantity: 1,
-              activeOptionList: ["綜合醬", "沙朗牛", "豬", "牛-五分熟", "麵換蛋"],
-              note: "菜加量"
-            },
-            {
-              mealName: "厚切里肌豬排",
-              price: 200,
-              quantity: 2,
-              activeOptionList: ["黑胡椒醬", "麵換菜"],
-              note: "菜加量"
-            },
-            {
-              mealName: "沙朗牛排5oz",
-              price: 200,
-              quantity: 3,
-              activeOptionList: ["蘑菇醬", "牛-五分熟"],
-              note: "麵加量"
-            }
-          ],
-          totalPrice: 1300,
-          createTime: "2023-09-22 15:41:56"
-        },
-        {
-          id: "2",
-          mealList: [
-            {
-              mealName: "沙朗牛排5oz",
-              price: 300,
-              quantity: 1,
-              activeOptionList: ["黑胡椒醬", "牛-五分熟", "麵換蛋"],
-              note: "qaz"
-            },
-            {
-              mealName: "厚切里肌豬排",
-              price: 200,
-              quantity: 2,
-              note: "wsx"
-            },
-            {
-              mealName: "黃金雞腿排",
-              price: 200,
-              quantity: 3,
-              activeOptionList: ["蘑菇醬", "麵換蛋"],
-              note: "edc"
-            }
-          ],
-          totalPrice: 1300,
-          createTime: "2023-09-22 15:41:56"
-        },
-        {
-          id: "3",
-          mealList: [
-            {
-              mealName: "沙朗牛排5oz",
-              price: 300,
-              quantity: 1,
-              activeOptionList: ["蘑菇醬", "牛-五分熟", "麵換蛋"],
-              note: ""
-            },
-            {
-              mealName: "厚切里肌豬排",
-              price: 200,
-              quantity: 2,
-              activeOptionList: ["黑胡椒醬", "麵換蛋"],
-              note: ""
-            },
-            {
-              mealName: "黃金雞腿排",
-              price: 200,
-              quantity: 3,
-              note: ""
-            }
-          ],
-          totalPrice: 1300,
-          createTime: "2023-09-22 15:41:56"
-        },
-        {
-          id: "4",
-          mealList: [
-            {
-              mealName: "雪花沙朗8oz",
-              price: 250,
-              quantity: 1,
-              note: ""
-            }
-          ],
-          totalPrice: 250,
-          createTime: "2023-09-22 15:41:56"
-        },
-        {
-          id: "5",
-          mealList: [
-            {
-              mealName: "鮭魚排",
-              price: 300,
-              quantity: 1,
-              note: ""
-            }
-          ],
-          totalPrice: 300,
-          createTime: "2023-09-22 15:41:56"
-        },
-        {
-          id: "6",
-          mealList: [
-            {
-              mealName: "法式羊排",
-              price: 200,
-              quantity: 1,
-              note: ""
-            }
-          ],
-          totalPrice: 200,
-          createTime: "2023-09-22 15:41:56"
-        }
-      ])
-    : null
-  paginationData.total = orderListData.value.length
-  loading.value = false
-}
 
 const handleSearch = () => {
   paginationData.currentPage === 1 ? getOrderData() : (paginationData.currentPage = 1)
@@ -205,6 +79,10 @@ const resetSearch = () => {
 
 /** 监听分页参数的变化 */
 watch([() => paginationData.currentPage, () => paginationData.pageSize], getOrderData, { immediate: true })
+
+watch(orderListData, () => {
+  paginationData.total = orderListData.value.length
+})
 </script>
 
 <template>
@@ -215,7 +93,6 @@ watch([() => paginationData.currentPage, () => paginationData.pageSize], getOrde
           <el-input v-model="searchData.id" placeholder="請輸入訂單編號" />
         </el-form-item>
         <el-form-item>
-          <el-button type="primary" :icon="Search" @click="handleSearch">查詢</el-button>
           <el-button :icon="Refresh" @click="resetSearch">重置</el-button>
         </el-form-item>
       </el-form>

@@ -9,7 +9,7 @@ import { type GetCategoryData } from "@/api/category-list/types/category"
 import { useMealsStore } from "@/store/modules/meals"
 
 import { type FormInstance, type FormRules, type TableInstance, ElMessage, ElMessageBox } from "element-plus"
-import { Search, Refresh, CirclePlus, Delete, RefreshRight } from "@element-plus/icons-vue"
+import { Refresh, CirclePlus, Delete, RefreshRight } from "@element-plus/icons-vue"
 // import { Search, Refresh, CirclePlus, Delete, Download, RefreshRight } from "@element-plus/icons-vue"
 
 import { usePagination } from "@/hooks/usePagination"
@@ -245,7 +245,6 @@ const initSort = () => {
       const { oldIndex, newIndex } = event
       const currentRow = categoryListData.value?.splice(oldIndex, 1)[0]
       categoryListData.value?.splice(newIndex, 0, currentRow)
-      // console.log(categoryListData.value.map((item) => item.categoryName))
     }
   })
 }
@@ -267,7 +266,6 @@ watch([() => paginationData.currentPage, () => paginationData.pageSize], getCate
           <el-input v-model="searchData.categoryName" placeholder="請輸入分類名稱" />
         </el-form-item>
         <el-form-item>
-          <el-button type="primary" :icon="Search" @click="handleSearch">查詢</el-button>
           <el-button :icon="Refresh" @click="resetSearch">重置</el-button>
         </el-form-item>
       </el-form>

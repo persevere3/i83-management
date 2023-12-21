@@ -11,12 +11,18 @@ interface Select {
 }
 
 export interface CreateMealRequestData {
-  categoryList: string[]
+  id: number
+  // CategoryList
+  categorys?: string[]
   mealName: string
-  origin: string
-  mealTextList: string[]
+  image?: string
+  file: any
+  origin?: string
   selectList?: Select[]
+  mealTextList?: string[]
   price: number
+  count?: string
+  enable?: number
 }
 
 export interface UpdateMealRequestData {
@@ -38,6 +44,9 @@ export interface GetMealRequestData {
   mealName?: string
 }
 
+export type GetMealResponseData = CreateMealRequestData[]
+
+// test
 export interface GetMealData {
   categoryList: string[]
   mealName: string
@@ -47,7 +56,7 @@ export interface GetMealData {
   price: number
 }
 
-export type GetMealResponseData = ApiResponseData<{
-  list: GetMealData[]
-  total: number
-}>
+// export type GetMealResponseData = ApiResponseData<{
+//   list: CreateMealRequestData[]
+//   total: number
+// }>

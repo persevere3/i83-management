@@ -22,7 +22,6 @@ export const useSelectsStore = defineStore("selects", () => {
         const { oldIndex, newIndex } = event
         const currentRow = selectListData.value?.splice(oldIndex, 1)[0]
         selectListData.value?.splice(newIndex, 0, currentRow)
-        // console.log(selectListData.value.map((item) => item.mealName))
       }
     })
   }

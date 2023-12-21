@@ -3,6 +3,7 @@ import store from "@/store"
 import { defineStore } from "pinia"
 
 import { type GetMealData } from "@/api/meal-list/types/meal"
+import { getMealDataApi } from "@/api/meal-list/"
 
 import Sortable from "sortablejs"
 
@@ -22,7 +23,6 @@ export const useMealsStore = defineStore("meals", () => {
         const { oldIndex, newIndex } = event
         const currentRow = mealListData.value?.splice(oldIndex, 1)[0]
         mealListData.value?.splice(newIndex, 0, currentRow)
-        // console.log(mealListData.value.map((item) => item.mealName))
       }
     })
   }
@@ -33,7 +33,6 @@ export const useMealsStore = defineStore("meals", () => {
   //#endregion
 
   const getMealData = () => {
-    loading.value = true
     !mealListData.value.length
       ? (mealListData.value = [
           //#region 單打獨鬥
@@ -155,7 +154,6 @@ export const useMealsStore = defineStore("meals", () => {
             price: 100
           },
           //#endregion
-
           //#region 咖哩飯
           {
             categoryList: ["咖哩飯"],
@@ -193,7 +191,6 @@ export const useMealsStore = defineStore("meals", () => {
             price: 260
           },
           //#endregion
-
           //#region 分進合擊
           {
             categoryList: ["分進合擊區"],
@@ -221,7 +218,6 @@ export const useMealsStore = defineStore("meals", () => {
             price: 500
           },
           //#endregion
-
           //#region 米食
           {
             categoryList: ["米食區"],
@@ -259,7 +255,6 @@ export const useMealsStore = defineStore("meals", () => {
             price: 220
           },
           //#endregion
-
           //#region 游擊
           {
             categoryList: ["游擊區"],
@@ -314,24 +309,25 @@ export const useMealsStore = defineStore("meals", () => {
         ])
       : null
     initSort()
-    loading.value = false
 
-    // loading.value = true
-    // getTableDataApi({
-    //   currentPage: paginationData.currentPage,
-    //   size: paginationData.pageSize,
-    //   username: searchData.name || undefined
-    // })
-    //   .then((res) => {
-    //     paginationData.total = res.data.total
-    //     tableData.value = res.data.list
-    //   })
-    //   .catch(() => {
-    //     tableData.value = []
-    //   })
-    //   .finally(() => {
-    //     loading.value = false
-    //   })
+    // api ==================================================
+    loading.value = true
+    getMealDataApi({
+      // currentPage: paginationData.currentPage,
+      // size: paginationData.pageSize,
+      // username: searchData.name || undefined
+    })
+      .then((res) => {
+        console.log(res)
+        // paginationData.total = res.data.total
+        // tableData.value = res.data.list
+      })
+      .catch(() => {
+        // tableData.value = []
+      })
+      .finally(() => {
+        loading.value = false
+      })
   }
 
   return { loading, mealListData, getMealData }

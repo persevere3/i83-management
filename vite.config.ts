@@ -41,6 +41,12 @@ export default (configEnv: ConfigEnv): UserConfigExport => {
           ws: true,
           /** 是否允许跨域 */
           changeOrigin: true
+        },
+        "/api": {
+          target: "http://192.168.6.239",
+          ws: true,
+          /** 是否允许跨域 */
+          changeOrigin: true
         }
       }
     },
