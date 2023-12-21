@@ -316,6 +316,7 @@ const testUpdateApi = () => {
 //#region 查
 const { mealListData } = storeToRefs(useMealsStore())
 const { getMealData } = useMealsStore()
+getMealData()
 
 const searchFormRef = ref<FormInstance | null>(null)
 const searchData = reactive({
@@ -339,10 +340,38 @@ const filterMealListData = computed<GetMealData[]>(() => {
   list = list.filter((item) => item.mealName.indexOf(searchData.mealName) > -1)
   return list
 })
-//#endregion
+watch(
+  filterMealListData,
+  () => {
+    paginationData.total = filterMealListData.value.length
+    paginationData.currentPage = 1
+    console.log("filterMealListData end")
+  },
+  { immediate: true }
+)
 
-/** 监听分页参数的变化 */
-watch([() => paginationData.currentPage, () => paginationData.pageSize], getMealData, { immediate: true })
+// startIndex, endIndex => pagefilterMealListData
+const startIndex = ref(0)
+const endIndex = ref(0)
+watch(
+  [() => paginationData.currentPage, () => paginationData.pageSize],
+  () => {
+    const current = paginationData.currentPage
+    const size = paginationData.pageSize
+    startIndex.value = current * size - size
+    endIndex.value = startIndex.value + size - 1
+    console.log("currentPage end")
+  },
+  { immediate: true }
+)
+const pagefilterMealListData = computed<GetMealData[]>(() => {
+  console.log("pagefilterMealListData start")
+  const list: GetMealData[] = filterMealListData.value.filter(
+    (meal, index) => index >= startIndex.value && index <= endIndex.value
+  )
+  return list
+})
+//#endregion
 
 watch(formDataSelectList, (list) => {
   const newSelectList: Select[] = []
@@ -362,9 +391,6 @@ watch(formDataSelectList, (list) => {
   })
 
   formData.selectList = JSON.parse(JSON.stringify(newSelectList))
-})
-watch(mealListData, () => {
-  paginationData.total = mealListData.value.length
 })
 </script>
 
@@ -416,7 +442,7 @@ watch(mealListData, () => {
       </div>
       <div class="table-wrapper">
         <!-- 必須加 row-key hover sortable 才不會有bug -->
-        <el-table ref="tableRef" :data="filterMealListData" row-key="mealName">
+        <el-table ref="tableRef" :data="pagefilterMealListData" row-key="mealName">
           <el-table-column type="selection" width="50" align="center" />
           <el-table-column label="餐點圖片" width="80" align="center" class="mealImg">
             <template #default="scope">
@@ -456,8 +482,8 @@ watch(mealListData, () => {
           :total="paginationData.total"
           :page-size="paginationData.pageSize"
           :currentPage="paginationData.currentPage"
-          @size-change="handleSizeChange"
           @current-change="handleCurrentChange"
+          @size-change="handleSizeChange"
         />
       </div>
     </el-card>
