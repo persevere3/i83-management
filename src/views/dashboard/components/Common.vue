@@ -286,7 +286,7 @@ const pieOption = ref({
 <template>
   <div class="app-container">
     <el-card class="dateRange">
-      <el-form ref="searchFormRef" :inline="true" :model="searchData">
+      <el-form ref="searchFormRef" :inline="true">
         <el-form-item prop="mealName" label="日期範圍">
           <el-date-picker
             v-model="activeDateRange"

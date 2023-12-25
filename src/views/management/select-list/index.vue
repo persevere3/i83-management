@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-import { reactive, ref, watch } from "vue"
+import { reactive, ref, computed, watch } from "vue"
 
 import { storeToRefs } from "pinia"
 
@@ -155,13 +155,40 @@ const handleSearch = () => {
   paginationData.currentPage === 1 ? getSelectData() : (paginationData.currentPage = 1)
 }
 const resetSearch = () => {
-  searchFormRef.value?.resetFields()
+  // searchFormRef.value?.resetFields()
+  searchData.selectName = ""
   handleSearch()
 }
-//#endregion
 
-/** 监听分页参数的变化 */
-watch([() => paginationData.currentPage, () => paginationData.pageSize], getSelectData, { immediate: true })
+const filterSelectListData = computed<GetSelectData[]>(() => {
+  return selectListData.value.filter((item) => item.selectName.indexOf(searchData.selectName) > -1)
+})
+watch(
+  filterSelectListData,
+  () => {
+    paginationData.total = filterSelectListData.value.length
+    paginationData.currentPage = 1
+  },
+  { immediate: true }
+)
+
+// startIndex, endIndex => pagefilterSelectListData
+const startIndex = ref(0)
+const endIndex = ref(0)
+watch(
+  [() => paginationData.currentPage, () => paginationData.pageSize],
+  () => {
+    const current = paginationData.currentPage
+    const size = paginationData.pageSize
+    startIndex.value = current * size - size
+    endIndex.value = startIndex.value + size - 1
+  },
+  { immediate: true }
+)
+const pagefilterSelectListData = computed<GetSelectData[]>(() => {
+  return filterSelectListData.value.filter((select, index) => index >= startIndex.value && index <= endIndex.value)
+})
+//#endregion
 </script>
 
 <template>
@@ -193,7 +220,7 @@ watch([() => paginationData.currentPage, () => paginationData.pageSize], getSele
       </div>
       <div class="table-wrapper">
         <!-- 必須加 row-key hover sortable 才不會有bug -->
-        <el-table ref="tableRef" :data="selectListData" row-key="selectName">
+        <el-table ref="tableRef" :data="pagefilterSelectListData" row-key="selectName">
           <el-table-column type="selection" width="50" align="center" />
           <el-table-column prop="selectName" label="選擇名稱" align="center" />
           <el-table-column label="選項" align="left">

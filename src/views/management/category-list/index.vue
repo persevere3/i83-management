@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-import { reactive, ref, watch, onMounted } from "vue"
+import { reactive, ref, computed, watch, onMounted } from "vue"
 
 import { storeToRefs } from "pinia"
 
@@ -167,6 +167,27 @@ const handleUpdate = (row: GetCategoryData) => {
 }
 //#endregion
 
+//#region sort
+const initSort = () => {
+  const table: HTMLElement | null = document.querySelector(".el-table__body tbody")
+  if (!table) return
+
+  Sortable.create(table, {
+    animation: 200, // 拖拽延时，效果更好看
+    onEnd: (event: any) => {
+      // 进行数据的处理，拖拽实际并不会改变绑定数据的顺序
+      const { oldIndex, newIndex } = event
+      const currentRow = categoryListData.value?.splice(oldIndex, 1)[0]
+      categoryListData.value?.splice(newIndex, 0, currentRow)
+    }
+  })
+}
+
+onMounted(() => {
+  initSort()
+})
+//#endregion
+
 //#region 查
 const categoryListData = ref<GetCategoryData[]>([])
 const searchFormRef = ref<FormInstance | null>(null)
@@ -224,38 +245,45 @@ const getCategoryData = () => {
   //     loading.value = false
   //   })
 }
+getCategoryData()
 const handleSearch = () => {
   paginationData.currentPage === 1 ? getCategoryData() : (paginationData.currentPage = 1)
 }
 const resetSearch = () => {
-  searchFormRef.value?.resetFields()
+  // searchFormRef.value?.resetFields()
+  searchData.categoryName = ""
   handleSearch()
 }
-//#endregion
 
-//#region sort
-const initSort = () => {
-  const table: HTMLElement | null = document.querySelector(".el-table__body tbody")
-  if (!table) return
+const filterCategoryListData = computed<GetCategoryData[]>(() => {
+  return categoryListData.value.filter((item) => item.categoryName.indexOf(searchData.categoryName) > -1)
+})
+watch(
+  filterCategoryListData,
+  () => {
+    paginationData.total = filterCategoryListData.value.length
+    paginationData.currentPage = 1
+  },
+  { immediate: true }
+)
 
-  Sortable.create(table, {
-    animation: 200, // 拖拽延时，效果更好看
-    onEnd: (event: any) => {
-      // 进行数据的处理，拖拽实际并不会改变绑定数据的顺序
-      const { oldIndex, newIndex } = event
-      const currentRow = categoryListData.value?.splice(oldIndex, 1)[0]
-      categoryListData.value?.splice(newIndex, 0, currentRow)
-    }
-  })
-}
-
-onMounted(() => {
-  initSort()
+// startIndex, endIndex => pagefilterCategoryListData
+const startIndex = ref(0)
+const endIndex = ref(0)
+watch(
+  [() => paginationData.currentPage, () => paginationData.pageSize],
+  () => {
+    const current = paginationData.currentPage
+    const size = paginationData.pageSize
+    startIndex.value = current * size - size
+    endIndex.value = startIndex.value + size - 1
+  },
+  { immediate: true }
+)
+const pagefilterCategoryListData = computed<GetCategoryData[]>(() => {
+  return filterCategoryListData.value.filter((category, index) => index >= startIndex.value && index <= endIndex.value)
 })
 //#endregion
-
-/** 监听分页参数的变化 */
-watch([() => paginationData.currentPage, () => paginationData.pageSize], getCategoryData, { immediate: true })
 </script>
 
 <template>
@@ -287,7 +315,7 @@ watch([() => paginationData.currentPage, () => paginationData.pageSize], getCate
       </div>
       <div class="table-wrapper">
         <!-- 必須加 row-key hover sortable 才不會有bug -->
-        <el-table ref="tableRef" :data="categoryListData" row-key="categoryName">
+        <el-table ref="tableRef" :data="pagefilterCategoryListData" row-key="categoryName">
           <el-table-column type="selection" width="50" align="center" />
           <el-table-column prop="categoryName" label="分類名稱" align="center" />
           <el-table-column prop="categoryText" label="分類說明" align="left" />

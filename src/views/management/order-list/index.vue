@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-import { reactive, ref, watch } from "vue"
+import { reactive, ref, computed, watch } from "vue"
 
 import { storeToRefs } from "pinia"
 
@@ -63,6 +63,8 @@ const batchDelete = () => {
 const { orderListData } = storeToRefs(useOrdersStore())
 const { getOrderData } = useOrdersStore()
 
+getOrderData()
+
 const searchFormRef = ref<FormInstance | null>(null)
 const searchData = reactive({
   id: ""
@@ -75,14 +77,36 @@ const resetSearch = () => {
   searchFormRef.value?.resetFields()
   handleSearch()
 }
-//#endregion
 
-/** 监听分页参数的变化 */
-watch([() => paginationData.currentPage, () => paginationData.pageSize], getOrderData, { immediate: true })
-
-watch(orderListData, () => {
-  paginationData.total = orderListData.value.length
+const filterOrderListData = computed<GetOrderData[]>(() => {
+  return orderListData.value.filter((item) => item.id.indexOf(searchData.id) > -1)
 })
+watch(
+  filterOrderListData,
+  () => {
+    paginationData.total = filterOrderListData.value.length
+    paginationData.currentPage = 1
+  },
+  { immediate: true }
+)
+
+// startIndex, endIndex => pagefilterOrderListData
+const startIndex = ref(0)
+const endIndex = ref(0)
+watch(
+  [() => paginationData.currentPage, () => paginationData.pageSize],
+  () => {
+    const current = paginationData.currentPage
+    const size = paginationData.pageSize
+    startIndex.value = current * size - size
+    endIndex.value = startIndex.value + size - 1
+  },
+  { immediate: true }
+)
+const pagefilterOrderListData = computed<GetOrderData[]>(() => {
+  return filterOrderListData.value.filter((order, index) => index >= startIndex.value && index <= endIndex.value)
+})
+//#endregion
 </script>
 
 <template>
@@ -113,7 +137,7 @@ watch(orderListData, () => {
       </div>
       <div class="table-wrapper">
         <!-- 必須加 row-key hover sortable 才不會有bug -->
-        <el-table ref="tableRef" :data="orderListData" row-key="id">
+        <el-table ref="tableRef" :data="pagefilterOrderListData" row-key="id">
           <el-table-column type="selection" width="50" align="center" />
           <el-table-column prop="id" label="訂單編號" width="200" align="center" />
           <el-table-column label="餐點" align="left">

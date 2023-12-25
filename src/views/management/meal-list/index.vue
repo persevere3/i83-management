@@ -345,7 +345,6 @@ watch(
   () => {
     paginationData.total = filterMealListData.value.length
     paginationData.currentPage = 1
-    console.log("filterMealListData end")
   },
   { immediate: true }
 )
@@ -360,12 +359,10 @@ watch(
     const size = paginationData.pageSize
     startIndex.value = current * size - size
     endIndex.value = startIndex.value + size - 1
-    console.log("currentPage end")
   },
   { immediate: true }
 )
 const pagefilterMealListData = computed<GetMealData[]>(() => {
-  console.log("pagefilterMealListData start")
   const list: GetMealData[] = filterMealListData.value.filter(
     (meal, index) => index >= startIndex.value && index <= endIndex.value
   )
