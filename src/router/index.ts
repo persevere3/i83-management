@@ -56,7 +56,7 @@ export const constantRoutes: RouteRecordRaw[] = [
         meta: {
           title: "首頁",
           svgIcon: "dashboard",
-          affix: true
+          keepAlive: true
         }
       }
     ]
@@ -64,7 +64,7 @@ export const constantRoutes: RouteRecordRaw[] = [
   {
     path: "/management",
     component: Layouts,
-    redirect: "/management/index.vue",
+    redirect: "/management/category-list",
     name: "Management",
     meta: {
       title: "管理",

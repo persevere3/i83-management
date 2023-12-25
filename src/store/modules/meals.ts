@@ -1,4 +1,4 @@
-import { ref, onMounted } from "vue"
+import { ref } from "vue"
 import store from "@/store"
 import { defineStore } from "pinia"
 
@@ -26,10 +26,6 @@ export const useMealsStore = defineStore("meals", () => {
       }
     })
   }
-
-  onMounted(() => {
-    initSort()
-  })
   //#endregion
 
   const getMealData = () => {
