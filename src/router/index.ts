@@ -106,6 +106,31 @@ export const constantRoutes: RouteRecordRaw[] = [
           title: "訂單管理",
           keepAlive: true
         }
+      },
+      {
+        path: "table-list",
+        component: () => import("@/views/management/table-list/index.vue"),
+        name: "TabletList",
+        meta: {
+          title: "顧客管理",
+          keepAlive: true
+        }
+      }
+    ]
+  },
+  {
+    path: "/customer",
+    component: Layouts,
+    redirect: "/management/table-list",
+    meta: {
+      hidden: true,
+      title: "QR code"
+    },
+    children: [
+      {
+        path: ":id",
+        component: () => import("@/views/customer/index.vue"),
+        name: "customer"
       }
     ]
   }
