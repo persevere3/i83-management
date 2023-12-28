@@ -1,4 +1,4 @@
-import { requestCommon } from "@/utils/service"
+import { requestCommon, requestGenerate } from "@/utils/service"
 import type * as Table from "./types/table"
 
 /** 增 */
@@ -7,6 +7,12 @@ export function createTableDataApi(data: Table.CreateTableRequestData) {
     url: "Tables",
     method: "post",
     data
+  })
+}
+export function openPayApi(tableId: number | string) {
+  return requestGenerate({
+    url: `GenetateOrder/${tableId}`,
+    method: "get"
   })
 }
 
