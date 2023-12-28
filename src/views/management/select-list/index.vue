@@ -3,8 +3,8 @@ import { reactive, ref, computed, watch } from "vue"
 
 import { storeToRefs } from "pinia"
 
-// import { createTableDataApi, deleteTableDataApi, updateTableDataApi, getTableDataApi } from "@/api/table"
 import { type GetSelectData } from "@/api/select-list/types/select"
+import { createSelectDataApi, updateSelectDataApi, deleteSelectDataApi } from "@/api/select-list"
 
 import { useSelectsStore } from "@/store/modules/selects"
 
@@ -31,14 +31,14 @@ const { paginationData, handleCurrentChange, handleSizeChange } = usePagination(
 const dialogVisible = ref<boolean>(false)
 const formRef = ref<FormInstance | null>(null)
 const formData = reactive<{
-  selectName: string
+  title: string
   optionList: string[]
 }>({
-  selectName: "",
+  title: "",
   optionList: []
 })
 const formRules: FormRules = reactive({
-  selectName: [{ required: true, trigger: "blur", message: "请输入選擇名稱" }],
+  title: [{ required: true, trigger: "blur", message: "请输入選擇名稱" }],
   optionList: [{ required: false, trigger: "blur", message: "请输入選項" }]
 })
 const addFormDataOption = () => {
@@ -50,39 +50,35 @@ const handleCreate = () => {
   formRef.value?.validate((valid: boolean, fields) => {
     if (valid) {
       if (currentUpdateId.value === undefined) {
-        selectListData.value.push(JSON.parse(JSON.stringify(formData)))
-
-        ElMessage.success("新增成功")
-        getSelectData()
-        dialogVisible.value = false
-
-        // createTableDataApi(formData)
-        //   .then(() => {
-        //     ElMessage.success("新增成功")
-        //     getTableData()
-        //   })
-        //   .finally(() => {
-        //     dialogVisible.value = false
-        //   })
+        createSelectDataApi({
+          id: 0,
+          title: formData.title,
+          optionList: JSON.stringify(formData.optionList),
+          max: 1,
+          min: 1
+        })
+          .then(() => {
+            ElMessage.success("新增成功")
+            getSelectData()
+          })
+          .finally(() => {
+            dialogVisible.value = false
+          })
       } else {
-        const index = selectListData.value.findIndex((item) => item.selectName === currentUpdateId.value)
-        index > -1 ? (selectListData.value[index] = JSON.parse(JSON.stringify(formData))) : null
-
-        ElMessage.success("修改成功")
-        getSelectData()
-        dialogVisible.value = false
-
-        // updateTableDataApi({
-        //   id: currentUpdateId.value,
-        //   username: formData.username
-        // })
-        //   .then(() => {
-        //     ElMessage.success("修改成功")
-        //     getTableData()
-        //   })
-        //   .finally(() => {
-        //     dialogVisible.value = false
-        //   })
+        updateSelectDataApi({
+          id: currentUpdateId.value,
+          title: formData.title,
+          optionList: JSON.stringify(formData.optionList),
+          max: 1,
+          min: 1
+        })
+          .then(() => {
+            ElMessage.success("修改成功")
+            getSelectData()
+          })
+          .finally(() => {
+            dialogVisible.value = false
+          })
       }
     } else {
       console.error("表單校驗不通過", fields)
@@ -92,7 +88,7 @@ const handleCreate = () => {
 const setForm = () => {
   // 新增餐點
   if (!currentUpdateId.value) {
-    formData.selectName = ""
+    formData.title = ""
     formData.optionList = []
   }
 }
@@ -104,14 +100,17 @@ const resetForm = () => {
 
 //#region 删
 const handleDelete = (row: GetSelectData) => {
-  ElMessageBox.confirm(`正在刪除選擇:${row.selectName}，確認刪除？`, "提示", {
+  ElMessageBox.confirm(`正在刪除選擇:${row.title}，確認刪除？`, "提示", {
     confirmButtonText: "確定",
     cancelButtonText: "取消",
     type: "warning"
   }).then(() => {
-    selectListData.value = selectListData.value.filter((item) => item.selectName !== row.selectName)
-    ElMessage.success("删除成功")
-    getSelectData()
+    deleteSelectDataApi([row.id])
+      .then(() => {
+        ElMessage.success("删除成功")
+        getSelectData()
+      })
+      .finally(() => {})
   })
 }
 
@@ -125,21 +124,22 @@ const batchDelete = () => {
     cancelButtonText: "取消",
     type: "warning"
   }).then(() => {
-    selections.forEach((element: GetSelectData) => {
-      const index = selectListData.value.findIndex((item) => item.selectName === element.selectName)
-      index > -1 ? selectListData.value.splice(index, 1) : null
-    })
-    ElMessage.success("删除成功")
-    getSelectData()
+    const ids: (number | string)[] = selections.map((item: GetSelectData) => item.id)
+    deleteSelectDataApi(ids)
+      .then(() => {
+        ElMessage.success("删除成功")
+        getSelectData()
+      })
+      .finally(() => {})
   })
 }
 //#endregion
 
 //#region 改
-const currentUpdateId = ref<undefined | string>(undefined)
+const currentUpdateId = ref<undefined | number>(undefined)
 const handleUpdate = (row: GetSelectData) => {
-  currentUpdateId.value = row.selectName
-  formData.selectName = row.selectName
+  currentUpdateId.value = row.id
+  formData.title = row.title
   formData.optionList = JSON.parse(JSON.stringify(row.optionList))
   dialogVisible.value = true
 }
@@ -148,7 +148,7 @@ const handleUpdate = (row: GetSelectData) => {
 //#region 查
 const searchFormRef = ref<FormInstance | null>(null)
 const searchData = reactive({
-  selectName: ""
+  title: ""
 })
 
 const handleSearch = () => {
@@ -156,12 +156,12 @@ const handleSearch = () => {
 }
 const resetSearch = () => {
   // searchFormRef.value?.resetFields()
-  searchData.selectName = ""
+  searchData.title = ""
   handleSearch()
 }
 
 const filterSelectListData = computed<GetSelectData[]>(() => {
-  return selectListData.value.filter((item) => item.selectName.indexOf(searchData.selectName) > -1)
+  return selectListData.value.filter((item) => item.title.indexOf(searchData.title) > -1)
 })
 watch(
   filterSelectListData,
@@ -196,7 +196,7 @@ const pagefilterSelectListData = computed<GetSelectData[]>(() => {
     <el-card v-loading="loading" shadow="never" class="search-wrapper">
       <el-form ref="searchFormRef" :inline="true" :model="searchData">
         <el-form-item prop="name" label="選擇名稱">
-          <el-input v-model="searchData.selectName" placeholder="請輸入選擇名稱" />
+          <el-input v-model="searchData.title" placeholder="請輸入選擇名稱" />
         </el-form-item>
         <el-form-item>
           <el-button :icon="Refresh" @click="resetSearch">重置</el-button>
@@ -220,9 +220,9 @@ const pagefilterSelectListData = computed<GetSelectData[]>(() => {
       </div>
       <div class="table-wrapper">
         <!-- 必須加 row-key hover sortable 才不會有bug -->
-        <el-table ref="tableRef" :data="pagefilterSelectListData" row-key="selectName">
+        <el-table ref="tableRef" :data="pagefilterSelectListData" row-key="id">
           <el-table-column type="selection" width="50" align="center" />
-          <el-table-column prop="selectName" label="選擇名稱" align="center" />
+          <el-table-column prop="title" label="選擇名稱" align="center" />
           <el-table-column label="選項" align="left">
             <template #default="scope">
               <span v-for="(item, index) in scope.row.optionList" :key="item"
@@ -260,8 +260,8 @@ const pagefilterSelectListData = computed<GetSelectData[]>(() => {
       width="35%"
     >
       <el-form ref="formRef" :model="formData" :rules="formRules" label-width="100px" label-position="left">
-        <el-form-item prop="selectName" label="選擇名稱">
-          <el-input v-model="formData.selectName" placeholder="请输入選擇名稱" />
+        <el-form-item prop="title" label="選擇名稱">
+          <el-input v-model="formData.title" placeholder="请输入選擇名稱" />
         </el-form-item>
         <el-form-item prop="" label="選項">
           <template v-for="(item, index) in formData.optionList" :key="index">

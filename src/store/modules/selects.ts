@@ -1,8 +1,9 @@
-import { ref, onMounted } from "vue"
+import { ref } from "vue"
 import store from "@/store"
 import { defineStore } from "pinia"
 
 import { type GetSelectData } from "@/api/select-list/types/select"
+import { getSelectDataApi } from "@/api/select-list"
 
 import Sortable from "sortablejs"
 
@@ -25,53 +26,22 @@ export const useSelectsStore = defineStore("selects", () => {
       }
     })
   }
-
-  onMounted(() => {
-    initSort()
-  })
   //#endregion
 
   const getSelectData = () => {
     loading.value = true
-    !selectListData.value.length
-      ? (selectListData.value = [
-          {
-            selectName: "醬料",
-            optionList: ["黑胡椒醬", "蘑菇醬", "綜合醬", "不加醬"]
-          },
-          {
-            selectName: "熟度",
-            optionList: ["牛-三分熟", "牛-五分熟", "牛-七分熟", "牛-全熟"]
-          },
-          {
-            selectName: "肉類",
-            optionList: ["豬", "雞", "沙朗牛", "羊", "鱈魚"]
-          },
-          {
-            selectName: "客製化",
-            optionList: ["麵換蛋", "麵換菜"]
-          }
-        ])
-      : null
-    initSort()
-    loading.value = false
-
-    // loading.value = true
-    // getTableDataApi({
-    //   currentPage: paginationData.currentPage,
-    //   size: paginationData.pageSize,
-    //   username: searchData.name || undefined
-    // })
-    //   .then((res) => {
-    //     paginationData.total = res.data.total
-    //     tableData.value = res.data.list
-    //   })
-    //   .catch(() => {
-    //     tableData.value = []
-    //   })
-    //   .finally(() => {
-    //     loading.value = false
-    //   })
+    getSelectDataApi({})
+      .then((res) => {
+        selectListData.value = res
+        const f = false
+        if (f) initSort()
+      })
+      .catch(() => {
+        selectListData.value = []
+      })
+      .finally(() => {
+        loading.value = false
+      })
   }
 
   return { loading, selectListData, getSelectData }

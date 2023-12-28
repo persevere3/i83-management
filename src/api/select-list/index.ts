@@ -1,27 +1,28 @@
-import { request } from "@/utils/service"
+import { requestCommon } from "@/utils/service"
 import type * as Select from "./types/select"
 
 /** 增 */
 export function createSelectDataApi(data: Select.CreateSelectRequestData) {
-  return request({
-    url: "table",
+  return requestCommon({
+    url: "Options",
     method: "post",
     data
   })
 }
 
 /** 删 */
-export function deleteSelectDataApi(id: string) {
-  return request({
-    url: `table/${id}`,
-    method: "delete"
+export function deleteSelectDataApi(ids: (number | string)[]) {
+  return requestCommon({
+    url: `Options`,
+    method: "delete",
+    data: ids
   })
 }
 
 /** 改 */
 export function updateSelectDataApi(data: Select.UpdateSelectRequestData) {
-  return request({
-    url: "table",
+  return requestCommon({
+    url: `Options/${data.id}`,
     method: "put",
     data
   })
@@ -30,8 +31,8 @@ export function updateSelectDataApi(data: Select.UpdateSelectRequestData) {
 /** 查 */
 export function getSelectDataApi(params: Select.GetSelectRequestData) {
   // Select.GetSelectResponseData ???
-  return request<Select.GetSelectResponseData>({
-    url: "table",
+  return requestCommon<Select.GetSelectResponseData>({
+    url: "Options",
     method: "get",
     params
   })

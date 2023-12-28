@@ -4,13 +4,19 @@
 // }
 
 export interface CreateSelectRequestData {
-  selectName: string
-  optionList: string[]
+  id: number
+  title: string
+  optionList: string
+  max: number
+  min: number
 }
 
 export interface UpdateSelectRequestData {
-  selectName: string
-  optionList: string[]
+  id: number
+  title: string
+  optionList: string
+  max: number
+  min: number
 }
 
 export interface GetSelectRequestData {
@@ -24,11 +30,11 @@ export interface GetSelectRequestData {
 }
 
 export interface GetSelectData {
-  selectName: string
-  optionList: string[]
+  id: number
+  title: string
+  optionList: string
+  max: number
+  min: number
 }
 
-export type GetSelectResponseData = ApiResponseData<{
-  list: GetSelectData[]
-  total: number
-}>
+export type GetSelectResponseData = GetSelectData[]
