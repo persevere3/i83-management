@@ -35,6 +35,7 @@ export interface GetOrderRequestData {
 
 export interface GetOrderData {
   id: string
+  storeName: string
   mealList: responseMeal[]
   totalPrice: number
   createTime: string

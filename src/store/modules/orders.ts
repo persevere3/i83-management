@@ -15,6 +15,7 @@ export const useOrdersStore = defineStore("orders", () => {
       ? (orderListData.value = [
           {
             id: "AE1695368516314274",
+            storeName: "復北店",
             mealList: [
               {
                 mealName: "海陸雙拼",
@@ -43,6 +44,7 @@ export const useOrdersStore = defineStore("orders", () => {
           },
           {
             id: "2",
+            storeName: "學府店",
             mealList: [
               {
                 mealName: "沙朗牛排5oz",
@@ -70,6 +72,7 @@ export const useOrdersStore = defineStore("orders", () => {
           },
           {
             id: "3",
+            storeName: "復北店",
             mealList: [
               {
                 mealName: "沙朗牛排5oz",
@@ -97,6 +100,7 @@ export const useOrdersStore = defineStore("orders", () => {
           },
           {
             id: "4",
+            storeName: "學府店",
             mealList: [
               {
                 mealName: "雪花沙朗8oz",
@@ -110,6 +114,7 @@ export const useOrdersStore = defineStore("orders", () => {
           },
           {
             id: "5",
+            storeName: "復北店",
             mealList: [
               {
                 mealName: "鮭魚排",
@@ -123,6 +128,7 @@ export const useOrdersStore = defineStore("orders", () => {
           },
           {
             id: "6",
+            storeName: "學府店",
             mealList: [
               {
                 mealName: "法式羊排",

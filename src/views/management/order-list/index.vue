@@ -21,6 +21,72 @@ defineOptions({
   name: "OrderList"
 })
 
+// #region 日期
+// 快捷鍵
+const shortcuts = [
+  {
+    text: "Last 1 day",
+    value: () => {
+      const start = new Date()
+      const end = new Date()
+      start.setTime(start.getTime() - 3600 * 1000 * 24 * 1)
+      return [start, end]
+    }
+  },
+  {
+    text: "Last 7 days",
+    value: () => {
+      const end = new Date()
+      const start = new Date()
+      start.setTime(start.getTime() - 3600 * 1000 * 24 * 7)
+      return [start, end]
+    }
+  },
+  {
+    text: "Last 30 days",
+    value: () => {
+      const end = new Date()
+      const start = new Date()
+      start.setTime(start.getTime() - 3600 * 1000 * 24 * 30)
+      return [start, end]
+    }
+  },
+  {
+    text: "Last 90 days",
+    value: () => {
+      const end = new Date()
+      const start = new Date()
+      start.setTime(start.getTime() - 3600 * 1000 * 24 * 90)
+      return [start, end]
+    }
+  },
+  {
+    text: "Last 180 days",
+    value: () => {
+      const end = new Date()
+      const start = new Date()
+      start.setTime(start.getTime() - 3600 * 1000 * 24 * 180)
+      return [start, end]
+    }
+  },
+  {
+    text: "Last 360 days",
+    value: () => {
+      const end = new Date()
+      const start = new Date()
+      start.setTime(start.getTime() - 3600 * 1000 * 24 * 365)
+      return [start, end]
+    }
+  }
+]
+
+const activeDateRange = ref<Date[]>([])
+
+const resetDateSearch = () => {
+  activeDateRange.value = []
+}
+// #endregion
+
 const loading = ref<boolean>(false)
 const { paginationData, handleCurrentChange, handleSizeChange } = usePagination()
 
@@ -78,8 +144,20 @@ const resetSearch = () => {
   handleSearch()
 }
 
+const storeList = reactive(["全部", "復北店", "學府店"])
+const activeStore = ref("全部")
+
 const filterOrderListData = computed<GetOrderData[]>(() => {
-  return orderListData.value.filter((item) => item.id.indexOf(searchData.id) > -1)
+  const startTime = activeDateRange.value[0]
+  const endTime = activeDateRange.value[1]
+  let orderList: GetOrderData[] = JSON.parse(JSON.stringify(orderListData.value))
+  if (startTime && endTime) {
+    orderList = orderList.filter((order: GetOrderData) => {
+      const createTime = new Date(order.createTime)
+      return createTime >= startTime && createTime <= endTime
+    })
+  }
+  return orderList.filter((item) => item.id.indexOf(searchData.id) > -1)
 })
 watch(
   filterOrderListData,
@@ -111,6 +189,24 @@ const pagefilterOrderListData = computed<GetOrderData[]>(() => {
 
 <template>
   <div class="app-container">
+    <el-card class="dateRange">
+      <el-form :inline="true">
+        <el-form-item prop="mealName" label="日期範圍">
+          <el-date-picker
+            v-model="activeDateRange"
+            type="daterange"
+            range-separator="To"
+            start-placeholder="Start Date"
+            end-placeholder="End Date"
+            :shortcuts="shortcuts"
+          />
+        </el-form-item>
+        <el-form-item>
+          <el-button :icon="Refresh" @click="resetDateSearch">重置</el-button>
+        </el-form-item>
+      </el-form>
+    </el-card>
+
     <el-card v-loading="loading" shadow="never" class="search-wrapper">
       <el-form ref="searchFormRef" :inline="true" :model="searchData">
         <el-form-item prop="id" label="訂單編號">
@@ -121,6 +217,7 @@ const pagefilterOrderListData = computed<GetOrderData[]>(() => {
         </el-form-item>
       </el-form>
     </el-card>
+
     <el-card v-loading="loading" shadow="never">
       <div class="toolbar-wrapper">
         <div>
@@ -133,6 +230,20 @@ const pagefilterOrderListData = computed<GetOrderData[]>(() => {
           <el-tooltip content="刷新當前頁">
             <el-button type="primary" :icon="RefreshRight" circle @click="getOrderData" />
           </el-tooltip>
+        </div>
+      </div>
+      <div class="toolbar-wrapper">
+        <div>
+          <el-button
+            v-for="item in storeList"
+            :key="item"
+            :type="item === activeStore ? 'success' : 'info'"
+            @click="activeStore = item"
+          >
+            {{ item }}
+            (<template v-if="item === '全部'"> {{ orderListData.length }} </template>
+            <template v-else> {{ orderListData.filter((item2) => item2.storeName === item).length }} </template>)
+          </el-button>
         </div>
       </div>
       <div class="table-wrapper">
@@ -187,6 +298,13 @@ const pagefilterOrderListData = computed<GetOrderData[]>(() => {
 </template>
 
 <style lang="scss" scoped>
+.dateRange {
+  margin-bottom: 20px;
+
+  .el-form-item {
+    margin-bottom: 0;
+  }
+}
 .search-wrapper {
   margin-bottom: 20px;
   :deep(.el-card__body) {
