@@ -3,7 +3,7 @@
 //   optionPrice: number
 // }
 
-export interface CreateSelectRequestData {
+export interface CreateReqData {
   id: number
   title: string
   optionList: string
@@ -11,7 +11,7 @@ export interface CreateSelectRequestData {
   min: number
 }
 
-export interface UpdateSelectRequestData {
+export interface UpdateReqData {
   id: number
   title: string
   optionList: string
@@ -19,22 +19,12 @@ export interface UpdateSelectRequestData {
   min: number
 }
 
-export interface GetSelectRequestData {
-  /** 当前页码 */
-  // currentPage: number
-  /** 查询条数 */
-  // size: number
-
-  /** 查询参数：分類名稱 */
-  selectName?: string
-}
-
-export interface GetSelectData {
+export interface ReadData {
   id: number
   title: string
-  optionList: string
+  optionList: string[]
   max: number
   min: number
 }
 
-export type GetSelectResponseData = GetSelectData[]
+export type ReadResData = ReadData[]

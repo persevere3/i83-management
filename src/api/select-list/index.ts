@@ -1,9 +1,9 @@
-import { requestCommon } from "@/utils/service"
+import { requestJson } from "@/utils/service"
 import type * as Select from "./types/select"
 
 /** 增 */
-export function createSelectDataApi(data: Select.CreateSelectRequestData) {
-  return requestCommon({
+export function createDataApi(data: Select.CreateReqData) {
+  return requestJson({
     url: "Options",
     method: "post",
     data
@@ -11,8 +11,8 @@ export function createSelectDataApi(data: Select.CreateSelectRequestData) {
 }
 
 /** 删 */
-export function deleteSelectDataApi(ids: (number | string)[]) {
-  return requestCommon({
+export function deleteDataApi(ids: number[]) {
+  return requestJson({
     url: `Options`,
     method: "delete",
     data: ids
@@ -20,8 +20,8 @@ export function deleteSelectDataApi(ids: (number | string)[]) {
 }
 
 /** 改 */
-export function updateSelectDataApi(data: Select.UpdateSelectRequestData) {
-  return requestCommon({
+export function updateDataApi(data: Select.UpdateReqData) {
+  return requestJson({
     url: `Options/${data.id}`,
     method: "put",
     data
@@ -29,11 +29,9 @@ export function updateSelectDataApi(data: Select.UpdateSelectRequestData) {
 }
 
 /** 查 */
-export function getSelectDataApi(params: Select.GetSelectRequestData) {
-  // Select.GetSelectResponseData ???
-  return requestCommon<Select.GetSelectResponseData>({
+export function getDataApi() {
+  return requestJson<Select.ReadResData>({
     url: "Options",
-    method: "get",
-    params
+    method: "get"
   })
 }
