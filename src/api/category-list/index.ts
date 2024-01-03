@@ -1,38 +1,38 @@
-import { request } from "@/utils/service"
+import { requestJson } from "@/utils/service"
 import type * as Category from "./types/category"
 
 /** 增 */
-export function createCategoryDataApi(data: Category.CreateCategoryRequestData) {
-  return request({
-    url: "table",
+export function createDataApi(data: Category.CreateReqData) {
+  console.log(data)
+  return requestJson({
+    url: "Categories",
     method: "post",
     data
   })
 }
 
 /** 删 */
-export function deleteTableDataApi(id: string) {
-  return request({
-    url: `table/${id}`,
-    method: "delete"
+export function deleteDataApi(ids: number[]) {
+  return requestJson({
+    url: `Categories`,
+    method: "delete",
+    data: ids
   })
 }
 
 /** 改 */
-export function updateTableDataApi(data: Category.UpdateCategoryRequestData) {
-  return request({
-    url: "table",
+export function updateDataApi(data: Category.UpdateReqData) {
+  return requestJson({
+    url: "Categories",
     method: "put",
     data
   })
 }
 
 /** 查 */
-export function getTableDataApi(params: Category.GetCategoryRequestData) {
-  // Category.GetCategoryResponseData ???
-  return request<Category.GetCategoryResponseData>({
-    url: "table",
-    method: "get",
-    params
+export function getDataApi() {
+  return requestJson<Category.ReadResData>({
+    url: "Categories",
+    method: "get"
   })
 }

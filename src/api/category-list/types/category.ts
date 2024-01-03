@@ -1,29 +1,30 @@
-export interface CreateCategoryRequestData {
-  categoryName: string
-  categoryText: string
+export interface CreateReqData {
+  id: number
+  name: string
+  text: string
 }
 
-export interface UpdateCategoryRequestData {
-  categoryName: string
-  categoryText: string
+export interface UpdateReqData {
+  id: number
+  name: string
+  text: string
 }
 
-export interface GetCategoryRequestData {
-  /** 当前页码 */
-  // currentPage: number
-  /** 查询条数 */
-  // size: number
-
-  /** 查询参数：分類名稱 */
-  categoryName?: string
+interface Product {
+  id: number
+  mealName: string
+  image: string
+  origin: string
+  mealTextList: string
+  selectList: string
+  price: number
+  count: string
+  enable: number
 }
-
-export interface GetCategoryData {
-  categoryName: string
-  categoryText: string
+export interface ReadData {
+  id: number
+  name: string
+  text: string
+  products: Product[]
 }
-
-export type GetCategoryResponseData = ApiResponseData<{
-  list: GetCategoryData[]
-  total: number
-}>
+export type ReadResData = ReadData[]

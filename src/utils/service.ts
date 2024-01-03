@@ -124,7 +124,7 @@ const service = createService()
 /** 用于网络请求的方法 */
 export const request = createRequest(service)
 
-function createRequestProd(service: AxiosInstance) {
+function createRequestFormData(service: AxiosInstance) {
   return function <T>(config: AxiosRequestConfig): Promise<T> {
     // const token = getToken()
     const defaultConfig = {
@@ -142,9 +142,9 @@ function createRequestProd(service: AxiosInstance) {
     return service(mergeConfig)
   }
 }
-export const requestProd = createRequestProd(service)
+export const requestFormData = createRequestFormData(service)
 
-function createRequestCommon(service: AxiosInstance) {
+function createRequestJson(service: AxiosInstance) {
   return function <T>(config: AxiosRequestConfig): Promise<T> {
     // const token = getToken()
     const defaultConfig = {
@@ -161,7 +161,7 @@ function createRequestCommon(service: AxiosInstance) {
     return service(mergeConfig)
   }
 }
-export const requestCommon = createRequestCommon(service)
+export const requestJson = createRequestJson(service)
 
 function createRequestGenerate(service: AxiosInstance) {
   return function <T>(config: AxiosRequestConfig): Promise<T> {
