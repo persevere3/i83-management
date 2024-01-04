@@ -1,7 +1,7 @@
 <script lang="ts" setup>
 import { ref, reactive, computed, watch } from "vue"
 
-import { type ReadResData } from "@/api/category-list/types/category"
+import { type ReadData, type ReadResData } from "@/api/category-list/types/category"
 import * as Category from "@/api/category-list/"
 
 import { storeToRefs } from "pinia"
@@ -31,33 +31,40 @@ const currentUpdateId = ref<number>(null)
 
 const formRef = ref<FormInstance | null>(null)
 const formData = reactive<{
-  categoryName: string
-  categoryText: string
-  categoryMeals: ReadCategoryData[]
+  name: string
+  text: string
+  mealList: number[]
 }>({
-  categoryName: "",
-  categoryText: "",
-  categoryMeals: []
+  name: "",
+  text: "",
+  mealList: []
 })
 const formRules: FormRules = reactive({
-  categoryName: [{ required: true, trigger: "blur", message: "請輸入類別名稱" }],
-  categoryText: [{ required: false, trigger: "blur", message: "請輸入類別說明" }]
+  name: [{ required: true, trigger: "blur", message: "請輸入類別名稱" }],
+  text: [{ required: false, trigger: "blur", message: "請輸入類別說明" }]
 })
 
-const openDialog = (category?: GetCategoryData) => {
-  if (category) {
-    currentUpdateId.value = category.id
-    formData.categoryName = category.name
-    formData.categoryText = category.text
-    formData.categoryMeals = category.products
+const openDialog = (row?: ReadData) => {
+  if (row) {
+    currentUpdateId.value = row.id
+    formData.name = row.name
+    formData.text = row.text
+    formData.mealList = row.products.map((item) => item.id)
   } else {
     currentUpdateId.value = undefined
-    formData.categoryName = ""
-    formData.categoryText = ""
-    formData.categoryMeals = []
+    formData.name = ""
+    formData.text = ""
+    formData.mealList = []
     formRef.value?.resetFields()
   }
   dialogVisible.value = true
+}
+
+const handleMealList = () => {
+  mealListData.value.forEach((item) => {
+    delete item.category
+  })
+  return mealListData.value.filter((item) => formData.mealList.find((id) => id === item.id))
 }
 
 const handleConfirm = () => {
@@ -74,10 +81,14 @@ const handleConfirm = () => {
 
 //#region 增
 const handleCreate = () => {
+  // const products = handleMealList()
+  console.log(products)
+
   Category.createDataApi({
     id: 0,
-    name: formData.categoryName,
-    text: formData.categoryText
+    name: formData.name,
+    text: formData.text
+    // products
   })
     .then(() => {
       ElMessage.success("新增成功")
@@ -90,7 +101,7 @@ const handleCreate = () => {
 //#endregion
 
 //#region 删
-const handleDelete = (row: Category.ReadData) => {
+const handleDelete = (row: ReadData) => {
   let text = ""
   let ids: string[]
   if (row) {
@@ -122,10 +133,14 @@ const handleDelete = (row: Category.ReadData) => {
 
 //#region 改
 const handleUpdate = () => {
+  const products = handleMealList()
+  console.log(products)
+
   Category.updateDataApi({
     id: currentUpdateId.value,
-    name: formData.categoryName,
-    text: formData.categoryText
+    name: formData.name,
+    text: formData.text
+    // products
   })
     .then(() => {
       ElMessage.success("修改成功")
@@ -138,7 +153,7 @@ const handleUpdate = () => {
 //#endregion
 
 //#region 查
-const { loading: categoryLoading, categoryListData } = storeToRefs(useCategoriesStore())
+const { loading, categoryListData } = storeToRefs(useCategoriesStore())
 const { getCategoryData } = useCategoriesStore()
 getCategoryData()
 
@@ -150,20 +165,20 @@ getMealData()
 //#region 過濾
 const searchFormRef = ref<FormInstance | null>(null)
 const searchData = reactive({
-  categoryName: ""
+  name: ""
 })
 const resetSearch = () => {
-  searchData.categoryName = ""
+  searchData.name = ""
   // searchFormRef.value?.resetFields()
 }
 
-const filterCategoryListData = computed<Category.ReadResData>(() => {
-  return categoryListData.value.filter((item) => item.name.indexOf(searchData.categoryName) > -1)
+const filterListData = computed<ReadResData>(() => {
+  return categoryListData.value.filter((item) => item.name.indexOf(searchData.name) > -1)
 })
 watch(
-  filterCategoryListData,
+  filterListData,
   () => {
-    paginationData.total = filterCategoryListData.value.length
+    paginationData.total = filterListData.value.length
     paginationData.currentPage = 1
   },
   { immediate: true }
@@ -182,25 +197,25 @@ watch(
   },
   { immediate: true }
 )
-const pagefilterCategoryListData = computed<ReadResData>(() => {
-  return filterCategoryListData.value.filter((category, index) => index >= startIndex.value && index <= endIndex.value)
+const pagefilterListData = computed<ReadResData>(() => {
+  return filterListData.value.filter((item, index) => index >= startIndex.value && index <= endIndex.value)
 })
 //#endregion
 </script>
 
 <template>
   <div class="app-container">
-    <el-card v-loading="categoryLoading" shadow="never" class="search-wrapper">
+    <el-card v-loading="loading" shadow="never" class="search-wrapper">
       <el-form ref="searchFormRef" :inline="true" :model="searchData">
         <el-form-item prop="name" label="分類名稱">
-          <el-input v-model="searchData.categoryName" placeholder="請輸入分類名稱" />
+          <el-input v-model="searchData.name" placeholder="請輸入分類名稱" />
         </el-form-item>
         <el-form-item>
           <el-button :icon="Refresh" @click="resetSearch">重置</el-button>
         </el-form-item>
       </el-form>
     </el-card>
-    <el-card v-loading="categoryLoading" shadow="never">
+    <el-card v-loading="loading" shadow="never">
       <div class="toolbar-wrapper">
         <div>
           <el-button type="primary" :icon="CirclePlus" @click="openDialog()">新增分類</el-button>
@@ -217,16 +232,10 @@ const pagefilterCategoryListData = computed<ReadResData>(() => {
       </div>
       <div class="table-wrapper">
         <!-- 必須加 row-key hover sortable 才不會有bug -->
-        <el-table ref="tableRef" :data="pagefilterCategoryListData" row-key="id">
+        <el-table ref="tableRef" :data="pagefilterListData" row-key="id">
           <el-table-column type="selection" width="50" align="center" />
           <el-table-column prop="name" label="分類名稱" align="center" />
           <el-table-column prop="text" label="分類說明" align="left" />
-          <!-- <el-table-column prop="status" label="狀態" align="center">
-            <template #default="scope">
-              <el-tag v-if="!scope.row.isShow" type="success" effect="plain">啟用</el-tag>
-              <el-tag v-else type="danger" effect="plain">禁用</el-tag>
-            </template>
-          </el-table-column> -->
           <el-table-column fixed="right" label="操作" width="150" align="center">
             <template #default="scope">
               <el-button type="primary" text bg size="small" @click="openDialog(scope.row)">修改</el-button>
@@ -251,15 +260,15 @@ const pagefilterCategoryListData = computed<ReadResData>(() => {
     <!-- 新增/修改 -->
     <el-dialog v-model="dialogVisible" :title="currentUpdateId === undefined ? '新增分類' : '修改分類'" width="35%">
       <el-form ref="formRef" :model="formData" :rules="formRules" label-width="100px" label-position="left">
-        <el-form-item prop="categoryName" label="分類名稱">
-          <el-input v-model="formData.categoryName" placeholder="請輸入分類名稱" />
+        <el-form-item prop="name" label="分類名稱">
+          <el-input v-model="formData.name" placeholder="請輸入分類名稱" />
         </el-form-item>
-        <el-form-item prop="categoryText" label="分類說明">
-          <el-input v-model="formData.categoryText" placeholder="請輸入分類說明" />
+        <el-form-item prop="text" label="分類說明">
+          <el-input v-model="formData.text" placeholder="請輸入分類說明" />
         </el-form-item>
         <el-form-item prop="" label="分類餐點">
-          <el-select v-model="formData.categoryMeals" multiple placeholder="分類餐點" style="width: 100%">
-            <el-option v-for="item in mealListData" :key="item.id" :label="item.mealName" :value="item" />
+          <el-select v-model="formData.mealList" multiple placeholder="分類餐點" style="width: 100%">
+            <el-option v-for="item in mealListData" :key="item.id" :label="item.mealName" :value="item.id" />
           </el-select>
         </el-form-item>
       </el-form>

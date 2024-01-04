@@ -10,7 +10,7 @@ export interface UpdateReqData {
   text: string
 }
 
-interface Product {
+export interface Product {
   id: number
   mealName: string
   image: string

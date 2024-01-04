@@ -3,7 +3,6 @@ import type * as Category from "./types/category"
 
 /** 增 */
 export function createDataApi(data: Category.CreateReqData) {
-  console.log(data)
   return requestJson({
     url: "Categories",
     method: "post",
