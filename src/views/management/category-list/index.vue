@@ -51,11 +51,11 @@ const openDialog = (row?: ReadData) => {
     formData.text = row.text
     formData.mealList = row.products.map((item) => item.id)
   } else {
+    formRef.value?.resetFields()
     currentUpdateId.value = undefined
     formData.name = ""
     formData.text = ""
     formData.mealList = []
-    formRef.value?.resetFields()
   }
   dialogVisible.value = true
 }
@@ -169,7 +169,6 @@ const searchData = reactive({
 })
 const resetSearch = () => {
   searchData.name = ""
-  // searchFormRef.value?.resetFields()
 }
 
 const filterListData = computed<ReadResData>(() => {
@@ -184,7 +183,7 @@ watch(
   { immediate: true }
 )
 
-// startIndex, endIndex => pagefilterCategoryListData
+// startIndex, endIndex => pagefilterListData
 const startIndex = ref(0)
 const endIndex = ref(0)
 watch(

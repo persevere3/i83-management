@@ -1,19 +1,11 @@
 <script lang="ts" setup>
-import { reactive, ref, watch, computed } from "vue"
+import { ref, reactive, watch, computed } from "vue"
 
-// import { createTableDataApi, deleteTableDataApi, updateTableDataApi, getTableDataApi } from "@/api/table"
-import { type GetTableData, CreateTableRequestData, UpdateTableRequestData } from "@/api/table-list/types/table"
-import {
-  createTableDataApi,
-  openPayApi,
-  deleteTableDataApi,
-  updateTableDataApi,
-  getTableDataApi
-} from "@/api/table-list"
+import { type ReadData, type ReadResData } from "@/api/table-list/types/table"
+import * as Table from "@/api/table-list"
 
 import { type FormInstance, type FormRules, type TableInstance, ElMessage, ElMessageBox } from "element-plus"
 import { Refresh, CirclePlus, Delete, RefreshRight } from "@element-plus/icons-vue"
-// import { Search, Refresh, CirclePlus, Delete, Download, RefreshRight } from "@element-plus/icons-vue"
 
 import { usePagination } from "@/hooks/usePagination"
 
@@ -26,13 +18,17 @@ defineOptions({
   name: "TableList"
 })
 
-const loading = ref(false)
-
 const { paginationData, handleCurrentChange, handleSizeChange } = usePagination()
 
-//#region 增
-// 桌號
+//#region table
+const tableRef = ref<TableInstance | null>(null)
+//#endregion
+
+//#region 新增/修改 dialog form
 const dialogVisible = ref<boolean>(false)
+
+const currentUpdateId = ref<number>(null)
+
 const formRef = ref<FormInstance | null>(null)
 const formData = reactive({
   storeName: "",
@@ -43,95 +39,136 @@ const formRules: FormRules = reactive({
   number: [{ required: true, trigger: "blur", message: "請選擇桌號" }]
 })
 
-const handleCreate = () => {
-  // fields ???
+const openDialog = (row?: ReadData) => {
+  if (row) {
+    currentUpdateId.value = row.id
+    formData.storeName = row.storeName
+    formData.number = row.number
+  } else {
+    formRef.value?.resetFields()
+    currentUpdateId.value = undefined
+    formData.storeName = ""
+    formData.number = ""
+    if (activeStore.value !== "全部") formData.storeName = activeStore.value
+  }
+  dialogVisible.value = true
+}
+
+const handleConfirm = () => {
   formRef.value?.validate((valid: boolean, fields) => {
     if (valid) {
-      if (currentUpdateId.value === undefined) {
-        const createTableData: CreateTableRequestData = {
-          id: 0,
-          storeName: formData.storeName,
-          number: formData.number,
-          orderToken: null,
-          enable: 0
-        }
-        createTableDataApi(createTableData)
-          .then(() => {
-            ElMessage.success("新增成功")
-            getTableData()
-          })
-          .finally(() => {
-            dialogVisible.value = false
-          })
-      } else {
-        const createTableData: UpdateTableRequestData = {
-          id: currentUpdateId.value,
-          storeName: formData.storeName,
-          number: formData.number,
-          orderToken: null,
-          enable: 0
-        }
-        updateTableDataApi(createTableData)
-          .then(() => {
-            ElMessage.success("修改成功")
-            getTableData()
-          })
-          .finally(() => {
-            dialogVisible.value = false
-          })
-      }
+      if (currentUpdateId.value === undefined) handleCreate()
+      else handleUpdate()
     } else {
       console.error("表單校驗不通過", fields)
     }
   })
-}
-const setForm = () => {
-  // 新增桌號
-  if (!currentUpdateId.value) {
-    formData.storeName = ""
-    formData.number = ""
-  }
-
-  // 新增桌號 && 選中某分店
-  if (!currentUpdateId.value && activeStore.value !== "全部") {
-    formData.storeName = activeStore.value
-  }
-}
-const resetForm = () => {
-  currentUpdateId.value = undefined
-  formRef.value?.resetFields()
 }
 //#endregion
 
 //#region 增
-// 開啟結單功能
-const isOpenPay = ref<boolean | null>(null)
-const controlPayDialogVisible = ref<boolean>(false)
-const openPayFormRef = ref<FormInstance | null>(null)
-const openPayFormData = reactive({
-  id: "",
+const handleCreate = () => {
+  Table.createDataApi({
+    id: 0,
+    storeName: formData.storeName,
+    number: formData.number,
+    orderToken: null,
+    enable: 0
+  })
+    .then(() => {
+      ElMessage.success("新增成功")
+      getTableData()
+    })
+    .finally(() => {
+      dialogVisible.value = false
+    })
+}
+//#endregion
+
+//#region 删
+const handleDelete = (row: ReadData) => {
+  let text = ""
+  let ids: string[]
+  if (row) {
+    text = `刪除${row.storeName}分店-桌號${row.number}，確認刪除？`
+    ids = [row.id]
+  } else {
+    text = "批量刪除桌號，確認刪除？"
+    const selections = tableRef.value?.getSelectionRows()
+    if (!selections.length) return
+    ids = selections.map((item) => item.id)
+  }
+
+  ElMessageBox.confirm(text, "提示", {
+    confirmButtonText: "確定",
+    cancelButtonText: "取消",
+    type: "warning"
+  }).then(() => {
+    Table.deleteDataApi(ids)
+      .then(() => {
+        ElMessage.success("删除成功")
+        getTableData()
+      })
+      .finally(() => {
+        dialogVisible.value = false
+      })
+  })
+}
+//#endregion
+
+//#region 改
+const handleUpdate = () => {
+  const table = tableListData.value.find((item) => item.id === currentUpdateId.value)
+  if (!table) return
+  Table.updateDataApi({
+    id: currentUpdateId.value,
+    storeName: formData.storeName,
+    number: formData.number,
+    orderToken: table.orderToken,
+    enable: table.enable
+  })
+    .then(() => {
+      ElMessage.success("修改成功")
+      getTableData()
+    })
+    .finally(() => {
+      dialogVisible.value = false
+    })
+}
+//#endregion
+
+//#region status
+const statusDialogVisible = ref<boolean>(false)
+const enable = ref<boolean | null>(null)
+const statusFormRef = ref<FormInstance | null>(null)
+const statusFormData = reactive({
   storeName: "",
-  number: ""
+  id: null
 })
-const openPayFormRules: FormRules = reactive({
+const statusFormRules: FormRules = reactive({
   storeName: [{ required: true, trigger: "blur", message: "請選擇分店" }],
   id: [{ required: true, trigger: "blur", message: "請選擇桌號" }]
 })
-const handlePay = () => {
-  // fields ???
-  openPayFormRef.value?.validate((valid: boolean, fields) => {
+const openStatusDialog = (isEnable: boolean) => {
+  statusFormRef.value?.resetFields()
+  enable.value = isEnable
+  statusFormData.storeName = ""
+  statusFormData.id = ""
+  if (activeStore.value !== "全部") statusFormData.storeName = activeStore.value
+  statusDialogVisible.value = true
+}
+const handleStatusConfirm = () => {
+  statusFormRef.value?.validate((valid: boolean, fields) => {
     if (valid) {
-      if (isOpenPay.value === true) {
-        openPay(openPayFormData.id)
-      } else if (isOpenPay.value === false) {
-        closePay(openPayFormData.id)
-      }
+      if (enable.value) handleEnable(statusFormData.id)
+      else handleDisable(statusFormData.id)
     } else {
       console.error("表單校驗不通過", fields)
     }
   })
 }
-const openPay = (id: number | string) => {
+
+const handleEnable = (id: number) => {
   const table = tableListData.value.find((item) => item.id === id)
   if (!table) return
   const text = `開啟${table.storeName}分店-桌號${table.number}，確認開啟？`
@@ -140,17 +177,17 @@ const openPay = (id: number | string) => {
     cancelButtonText: "取消",
     type: "warning"
   }).then(() => {
-    openPayApi(id)
+    Table.enableApi(id)
       .then(() => {
         ElMessage.success("開啟成功")
         getTableData()
       })
       .finally(() => {
-        controlPayDialogVisible.value = false
+        statusDialogVisible.value = false
       })
   })
 }
-const closePay = (id: number | string) => {
+const handleDisable = (id: number) => {
   const table = tableListData.value.find((item) => item.id === id)
   if (!table) return
   const text = `關閉${table.storeName}分店-桌號${table.number}，確認關閉？`
@@ -159,94 +196,23 @@ const closePay = (id: number | string) => {
     cancelButtonText: "取消",
     type: "warning"
   }).then(() => {
-    const createTableData: UpdateTableRequestData = {
+    Table.updateDataApi({
       id: table.id,
       storeName: table.storeName,
       number: table.number,
       orderToken: null,
       enable: 0
-    }
-    updateTableDataApi(createTableData)
+    })
       .then(() => {
         ElMessage.success("關閉成功")
         getTableData()
       })
       .finally(() => {
-        controlPayDialogVisible.value = false
+        statusDialogVisible.value = false
       })
   })
 }
-const setOpenPayForm = () => {
-  openPayFormData.id = ""
-  openPayFormData.storeName = ""
-  openPayFormData.number = ""
-  // 選中某分店
-  if (activeStore.value !== "全部") {
-    openPayFormData.storeName = activeStore.value
-  }
-}
-const resetOpenPayForm = () => {
-  isOpenPay.value = null
-  openPayFormRef.value?.resetFields()
-}
 //#endregion
-
-//#region 删
-const handleDelete = (row: GetTableData) => {
-  const text = `刪除${row.storeName}分店-桌號${row.number}，確認刪除？`
-
-  ElMessageBox.confirm(text, "提示", {
-    confirmButtonText: "確定",
-    cancelButtonText: "取消",
-    type: "warning"
-  }).then(() => {
-    deleteTableDataApi([row.id])
-      .then(() => {
-        ElMessage.success("刪除成功")
-        getTableData()
-      })
-      .finally(() => {})
-  })
-}
-
-const tableRef = ref<TableInstance | null>(null)
-const batchDelete = () => {
-  const selections = tableRef.value?.getSelectionRows()
-  if (!selections.length) return
-
-  const text = "批量刪除桌號，確認刪除？"
-
-  ElMessageBox.confirm(text, "提示", {
-    confirmButtonText: "確定",
-    cancelButtonText: "取消",
-    type: "warning"
-  }).then(() => {
-    const arr = ref<(number | string)[]>([])
-    selections.forEach((element: GetTableData) => {
-      arr.value.push(element.id)
-    })
-    deleteTableDataApi(arr.value)
-      .then(() => {
-        ElMessage.success("刪除成功")
-        getTableData()
-      })
-      .finally(() => {})
-  })
-}
-//#endregion
-
-//#region 改
-const currentUpdateId = ref<undefined | string | number>(undefined)
-const handleUpdate = (row: GetTableData) => {
-  currentUpdateId.value = row.id
-  formData.storeName = row.storeName
-  formData.number = row.number
-  dialogVisible.value = true
-}
-//#endregion
-
-//#region 查
-const tableListData = ref<GetTableData[]>([])
 
 //#region sort
 const initSort = () => {
@@ -265,14 +231,16 @@ const initSort = () => {
 }
 //#endregion
 
+//#region 查
+const loading = ref<boolean>(false)
+const tableListData = ref<ReadResData>([])
 const getTableData = () => {
   loading.value = true
-  getTableDataApi({})
+  Table.getDataApi()
     .then((res) => {
       tableListData.value = res
       const f = false
       if (f) initSort()
-      // paginationData.total = res.data.total
     })
     .catch(() => {
       tableListData.value = []
@@ -282,41 +250,42 @@ const getTableData = () => {
     })
 }
 getTableData()
+//#endregion
+
+//#region 過濾
 const searchFormRef = ref<FormInstance | null>(null)
 const searchData = reactive({
   number: ""
 })
-
-const handleSearch = () => {
-  paginationData.currentPage === 1 ? getTableData() : (paginationData.currentPage = 1)
-}
 const resetSearch = () => {
-  searchFormRef.value?.resetFields()
-  handleSearch()
+  searchData.number = ""
 }
 
 const storeList = reactive(["全部", "復北店", "學府店"])
 const activeStore = ref("全部")
 const activeStatus = ref<boolean | null>(null)
-const filterTableListData = computed<GetTableData[]>(() => {
-  let list: GetTableData[]
-  if (activeStore.value === "全部") list = tableListData.value
-  else list = tableListData.value.filter((item) => item.storeName === activeStore.value)
+const filterListData = computed<ReadResData>(() => {
+  let list = tableListData.value
+  // 分店
+  if (activeStore.value !== "全部") list = list.filter((item) => item.storeName === activeStore.value)
+  // 桌號
   list = list.filter((item) => item.number.indexOf(searchData.number) > -1)
-  if (activeStatus.value === null) return list
-  list = list.filter((item) => Boolean(item.enable) === activeStatus.value)
+  // 開啟/關閉
+  if (activeStatus.value !== null) {
+    list = list.filter((item) => Boolean(item.enable) === activeStatus.value)
+  }
   return list
 })
 watch(
-  filterTableListData,
+  filterListData,
   () => {
-    paginationData.total = filterTableListData.value.length
+    paginationData.total = filterListData.value.length
     paginationData.currentPage = 1
   },
   { immediate: true }
 )
 
-// startIndex, endIndex => pagefilterTableListData
+// startIndex, endIndex => pagefilterListData
 const startIndex = ref(0)
 const endIndex = ref(0)
 watch(
@@ -329,11 +298,8 @@ watch(
   },
   { immediate: true }
 )
-const pagefilterTableListData = computed<GetTableData[]>(() => {
-  const list: GetTableData[] = filterTableListData.value.filter(
-    (table, index) => index >= startIndex.value && index <= endIndex.value
-  )
-  return list
+const pagefilterListData = computed<ReadResData>(() => {
+  return filterListData.value.filter((item, index) => index >= startIndex.value && index <= endIndex.value)
 })
 //#endregion
 </script>
@@ -353,14 +319,10 @@ const pagefilterTableListData = computed<GetTableData[]>(() => {
     <el-card v-loading="loading" shadow="never">
       <div class="toolbar-wrapper">
         <div>
-          <el-button type="primary" :icon="CirclePlus" @click="dialogVisible = true">新增桌號</el-button>
-          <el-button class="mr-20" type="danger" :icon="Delete" @click="batchDelete()">批量刪除</el-button>
-          <el-button type="primary" :icon="CirclePlus" @click="(isOpenPay = true), (controlPayDialogVisible = true)"
-            >開啟桌號</el-button
-          >
-          <el-button type="danger" :icon="Delete" @click="(isOpenPay = false), (controlPayDialogVisible = true)"
-            >關閉桌號</el-button
-          >
+          <el-button type="primary" :icon="CirclePlus" @click="openDialog()">新增桌號</el-button>
+          <el-button class="mr-20" type="danger" :icon="Delete" @click="handleDelete()">批量刪除</el-button>
+          <el-button type="primary" :icon="CirclePlus" @click="openStatusDialog(true)">開啟桌號</el-button>
+          <el-button type="danger" :icon="Delete" @click="openStatusDialog(false)">關閉桌號</el-button>
         </div>
         <div>
           <el-tooltip content="刷新當前頁">
@@ -407,7 +369,7 @@ const pagefilterTableListData = computed<GetTableData[]>(() => {
       </div>
       <div class="table-wrapper">
         <!-- 必須加 row-key hover sortable 才不會有bug -->
-        <el-table ref="tableRef" :data="pagefilterTableListData" row-key="id">
+        <el-table ref="tableRef" :data="pagefilterListData" row-key="id">
           <el-table-column type="selection" width="50" align="center" />
           <el-table-column prop="storeName" label="分店" align="center" />
           <el-table-column prop="number" label="桌號" align="center" />
@@ -426,15 +388,15 @@ const pagefilterTableListData = computed<GetTableData[]>(() => {
           </el-table-column>
           <el-table-column prop="status" label="狀態" width="80" align="center">
             <template #default="scope">
-              <el-tag v-if="scope.row.enable" type="success" effect="plain" @click="closePay(scope.row.id)"
+              <el-tag v-if="scope.row.enable" type="success" effect="plain" @click="handleDisable(scope.row.id)"
                 >啟用</el-tag
               >
-              <el-tag v-else type="danger" effect="plain" @click="openPay(scope.row.id)">禁用</el-tag>
+              <el-tag v-else type="danger" effect="plain" @click="handleEnable(scope.row.id)">禁用</el-tag>
             </template>
           </el-table-column>
           <el-table-column fixed="right" label="操作" width="200" align="center">
             <template #default="scope">
-              <el-button type="primary" text bg size="small" @click="handleUpdate(scope.row)">修改</el-button>
+              <el-button type="primary" text bg size="small" @click="openDialog(scope.row)">修改</el-button>
               <el-button type="danger" text bg size="small" @click="handleDelete(scope.row)">删除</el-button>
             </template>
           </el-table-column>
@@ -454,13 +416,7 @@ const pagefilterTableListData = computed<GetTableData[]>(() => {
       </div>
     </el-card>
     <!-- 新增/修改 桌號 -->
-    <el-dialog
-      v-model="dialogVisible"
-      :title="currentUpdateId === undefined ? '新增桌號' : '修改桌號'"
-      @open="setForm"
-      @close="resetForm"
-      width="35%"
-    >
+    <el-dialog v-model="dialogVisible" :title="currentUpdateId === undefined ? '新增桌號' : '修改桌號'" width="35%">
       <el-form ref="formRef" :model="formData" :rules="formRules" label-width="100px" label-position="left">
         <el-form-item prop="storeName" label="分店">
           <el-select v-model="formData.storeName" placeholder="請選擇分店" style="width: 100%">
@@ -473,36 +429,30 @@ const pagefilterTableListData = computed<GetTableData[]>(() => {
       </el-form>
       <template #footer>
         <el-button @click="dialogVisible = false">取消</el-button>
-        <el-button type="primary" @click="handleCreate">確認</el-button>
+        <el-button type="primary" @click="handleConfirm">確認</el-button>
       </template>
     </el-dialog>
 
-    <!-- 新增 顧客 -->
-    <el-dialog
-      v-model="controlPayDialogVisible"
-      :title="isOpenPay === true ? '開啟桌號' : '關閉桌號'"
-      @open="setOpenPayForm"
-      @close="resetOpenPayForm"
-      width="35%"
-    >
+    <!-- 改變狀態 桌號 -->
+    <el-dialog v-model="statusDialogVisible" :title="enable === true ? '開啟桌號' : '關閉桌號'" width="35%">
       <el-form
-        ref="openPayFormRef"
-        :model="openPayFormData"
-        :rules="openPayFormRules"
+        ref="statusFormRef"
+        :model="statusFormData"
+        :rules="statusFormRules"
         label-width="100px"
         label-position="left"
       >
         <el-form-item prop="storeName" label="分店">
-          <el-select v-model="openPayFormData.storeName" placeholder="請選擇分店" style="width: 100%">
+          <el-select v-model="statusFormData.storeName" placeholder="請選擇分店" style="width: 100%">
             <el-option v-for="item in storeList" :key="item" v-show="item !== '全部'" :label="item" :value="item" />
           </el-select>
         </el-form-item>
         <el-form-item prop="number" label="桌號">
-          <el-select v-model="openPayFormData.id" placeholder="請選擇桌號" style="width: 100%">
+          <el-select v-model="statusFormData.id" placeholder="請選擇桌號" style="width: 100%">
             <el-option
               v-for="item in tableListData"
               :key="item.id"
-              v-show="item.storeName === openPayFormData.storeName && (isOpenPay === true ? !item.enable : item.enable)"
+              v-show="item.storeName === statusFormData.storeName && (enable === true ? !item.enable : item.enable)"
               :label="item.number"
               :value="item.id"
             />
@@ -510,8 +460,8 @@ const pagefilterTableListData = computed<GetTableData[]>(() => {
         </el-form-item>
       </el-form>
       <template #footer>
-        <el-button @click="controlPayDialogVisible = false">取消</el-button>
-        <el-button type="primary" @click="handlePay">確認</el-button>
+        <el-button @click="statusDialogVisible = false">取消</el-button>
+        <el-button type="primary" @click="handleStatusConfirm">確認</el-button>
       </template>
     </el-dialog>
   </div>

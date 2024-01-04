@@ -1,24 +1,18 @@
-import { requestCommon, requestGenerate } from "@/utils/service"
+import { requestJson, requestGenerate } from "@/utils/service"
 import type * as Table from "./types/table"
 
 /** 增 */
-export function createTableDataApi(data: Table.CreateTableRequestData) {
-  return requestCommon({
+export function createDataApi(data: Table.CreateReqData) {
+  return requestJson({
     url: "Tables",
     method: "post",
     data
   })
 }
-export function openPayApi(tableId: number | string) {
-  return requestGenerate({
-    url: `GenetateOrder/${tableId}`,
-    method: "get"
-  })
-}
 
 /** 删 */
-export function deleteTableDataApi(ids: (number | string)[]) {
-  return requestCommon({
+export function deleteDataApi(ids: number[]) {
+  return requestJson({
     url: `Tables`,
     method: "delete",
     data: ids
@@ -26,20 +20,25 @@ export function deleteTableDataApi(ids: (number | string)[]) {
 }
 
 /** 改 */
-export function updateTableDataApi(data: Table.UpdateTableRequestData) {
-  return requestCommon({
+export function updateDataApi(data: Table.UpdateReqData) {
+  return requestJson({
     url: `Tables/${data.id}`,
     method: "put",
     data
   })
 }
 
+export function enableApi(tableId: number) {
+  return requestGenerate({
+    url: `GenetateOrder/${tableId}`,
+    method: "get"
+  })
+}
+
 /** 查 */
-export function getTableDataApi(params: Table.GetTableRequestData) {
-  // Table.GetTableResponseData ???
-  return requestCommon<Table.GetTableResponseData>({
+export function getDataApi() {
+  return requestJson<Table.ReadResData>({
     url: "Tables",
-    method: "get",
-    params
+    method: "get"
   })
 }

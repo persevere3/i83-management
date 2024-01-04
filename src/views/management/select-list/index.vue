@@ -50,10 +50,10 @@ const openDialog = (row?: ReadData) => {
     formData.name = row.title
     formData.optionList = row.optionList
   } else {
+    formRef.value?.resetFields()
     currentUpdateId.value = undefined
     formData.name = ""
     formData.optionList = []
-    formRef.value?.resetFields()
   }
   dialogVisible.value = true
 }
@@ -154,7 +154,6 @@ const searchData = reactive({
 })
 const resetSearch = () => {
   searchData.name = ""
-  // searchFormRef.value?.resetFields()
 }
 
 const filterListData = computed<ReadResData>(() => {
