@@ -113,7 +113,7 @@ const handleDelete = (row: ReadData) => {
     Select.deleteDataApi(ids)
       .then(() => {
         ElMessage.success("删除成功")
-        getSelectData()()
+        getSelectData()
       })
       .finally(() => {
         dialogVisible.value = false
@@ -210,7 +210,7 @@ const pagefilterListData = computed<ReadResData>(() => {
             <el-button type="primary" :icon="Download" circle />
           </el-tooltip> -->
           <el-tooltip content="刷新當前頁">
-            <el-button type="primary" :icon="RefreshRight" circle @click="getSelectData" />
+            <el-button type="primary" :icon="RefreshRight" circle @click="getSelectData()" />
           </el-tooltip>
         </div>
       </div>
