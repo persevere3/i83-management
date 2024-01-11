@@ -1,8 +1,8 @@
 <script lang="ts" setup>
 import { ref } from "vue"
 
-import { type GetTableData } from "@/api/table-list/types/table"
-import { getTableDataApi } from "@/api/table-list"
+import { type ReadData } from "@/api/table-list/types/table"
+import * as Table from "@/api/table-list"
 
 import { useRoute } from "vue-router"
 
@@ -17,10 +17,10 @@ const loading = ref(false)
 
 const { id } = useRoute().params
 
-const tableListData = ref<GetTableData[]>([])
-const activeTable = ref<GetTableData>({})
+const tableListData = ref<ReadData[]>([])
+const activeTable = ref<ReadData>({})
 loading.value = true
-getTableDataApi({})
+Table.getDataApi()
   .then((res) => {
     tableListData.value = res
     activeTable.value = tableListData.value.find((item) => item.id == id)

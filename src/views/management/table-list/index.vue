@@ -1,7 +1,7 @@
 <script lang="ts" setup>
 import { ref, reactive, watch, computed } from "vue"
 
-import { type ReadData, type ReadResData } from "@/api/table-list/types/table"
+import { type ReadData } from "@/api/table-list/types/table"
 import * as Table from "@/api/table-list"
 
 import { type FormInstance, type FormRules, type TableInstance, ElMessage, ElMessageBox } from "element-plus"
@@ -27,9 +27,9 @@ const tableRef = ref<TableInstance | null>(null)
 //#region 新增/修改 dialog form
 const dialogVisible = ref<boolean>(false)
 
-const currentUpdateId = ref<number>(null)
+const currentUpdateId = ref<number>()
 
-const formRef = ref<FormInstance | null>(null)
+const formRef = ref<FormInstance>()
 const formData = reactive({
   storeName: "",
   number: ""
@@ -72,7 +72,7 @@ const handleCreate = () => {
     id: 0,
     storeName: formData.storeName,
     number: formData.number,
-    orderToken: null,
+    orderToken: undefined,
     enable: 0
   })
     .then(() => {
@@ -86,9 +86,9 @@ const handleCreate = () => {
 //#endregion
 
 //#region 删
-const handleDelete = (row: ReadData) => {
+const handleDelete = (row?: ReadData) => {
   let text = ""
-  let ids: string[]
+  let ids: number[]
   if (row) {
     text = `刪除${row.storeName}分店-桌號${row.number}，確認刪除？`
     ids = [row.id]
@@ -96,7 +96,7 @@ const handleDelete = (row: ReadData) => {
     text = "批量刪除桌號，確認刪除？"
     const selections = tableRef.value?.getSelectionRows()
     if (!selections.length) return
-    ids = selections.map((item) => item.id)
+    ids = selections.map((item: ReadData) => item.id)
   }
 
   ElMessageBox.confirm(text, "提示", {
@@ -118,6 +118,7 @@ const handleDelete = (row: ReadData) => {
 
 //#region 改
 const handleUpdate = () => {
+  if (!currentUpdateId.value) return
   const table = tableListData.value.find((item) => item.id === currentUpdateId.value)
   if (!table) return
   Table.updateDataApi({
@@ -143,7 +144,7 @@ const enable = ref<boolean | null>(null)
 const statusFormRef = ref<FormInstance | null>(null)
 const statusFormData = reactive({
   storeName: "",
-  id: null
+  id: 0
 })
 const statusFormRules: FormRules = reactive({
   storeName: [{ required: true, trigger: "blur", message: "請選擇分店" }],
@@ -153,11 +154,12 @@ const openStatusDialog = (isEnable: boolean) => {
   statusFormRef.value?.resetFields()
   enable.value = isEnable
   statusFormData.storeName = ""
-  statusFormData.id = ""
+  statusFormData.id = 0
   if (activeStore.value !== "全部") statusFormData.storeName = activeStore.value
   statusDialogVisible.value = true
 }
 const handleStatusConfirm = () => {
+  if (!statusFormData.id) return
   statusFormRef.value?.validate((valid: boolean, fields) => {
     if (valid) {
       if (enable.value) handleEnable(statusFormData.id)
@@ -200,7 +202,7 @@ const handleDisable = (id: number) => {
       id: table.id,
       storeName: table.storeName,
       number: table.number,
-      orderToken: null,
+      orderToken: undefined,
       enable: 0
     })
       .then(() => {
@@ -233,7 +235,7 @@ const initSort = () => {
 
 //#region 查
 const loading = ref<boolean>(false)
-const tableListData = ref<ReadResData>([])
+const tableListData = ref<ReadData[]>([])
 const getTableData = () => {
   loading.value = true
   Table.getDataApi()
@@ -264,7 +266,7 @@ const resetSearch = () => {
 const storeList = reactive(["全部", "復北店", "學府店"])
 const activeStore = ref("全部")
 const activeStatus = ref<boolean | null>(null)
-const filterListData = computed<ReadResData>(() => {
+const filterListData = computed<ReadData[]>(() => {
   let list = tableListData.value
   // 分店
   if (activeStore.value !== "全部") list = list.filter((item) => item.storeName === activeStore.value)
@@ -298,7 +300,7 @@ watch(
   },
   { immediate: true }
 )
-const pagefilterListData = computed<ReadResData>(() => {
+const pagefilterListData = computed<ReadData[]>(() => {
   return filterListData.value.filter((item, index) => index >= startIndex.value && index <= endIndex.value)
 })
 //#endregion
