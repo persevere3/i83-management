@@ -22,7 +22,7 @@ export function deleteDataApi(ids: number[]) {
 /** 改 */
 export function updateDataApi(data: Category.UpdateReqData) {
   return requestJson({
-    url: "Categories",
+    url: `Categories/${data.id}`,
     method: "put",
     data
   })

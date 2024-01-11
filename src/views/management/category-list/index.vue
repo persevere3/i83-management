@@ -1,7 +1,7 @@
 <script lang="ts" setup>
 import { ref, reactive, computed, watch } from "vue"
 
-import { type ReadData, type ReadResData } from "@/api/category-list/types/category"
+import { type ReadData } from "@/api/category-list/types/category"
 import * as Category from "@/api/category-list/"
 
 import { storeToRefs } from "pinia"
@@ -27,9 +27,9 @@ const tableRef = ref<TableInstance | null>(null)
 //#region 新增/修改 dialog form
 const dialogVisible = ref<boolean>(false)
 
-const currentUpdateId = ref<number>(null)
+const currentUpdateId = ref<number>()
 
-const formRef = ref<FormInstance | null>(null)
+const formRef = ref<FormInstance>()
 const formData = reactive<{
   name: string
   text: string
@@ -60,13 +60,6 @@ const openDialog = (row?: ReadData) => {
   dialogVisible.value = true
 }
 
-const handleMealList = () => {
-  mealListData.value.forEach((item) => {
-    delete item.category
-  })
-  return mealListData.value.filter((item) => formData.mealList.find((id) => id === item.id))
-}
-
 const handleConfirm = () => {
   formRef.value?.validate((valid: boolean, fields) => {
     if (valid) {
@@ -81,18 +74,15 @@ const handleConfirm = () => {
 
 //#region 增
 const handleCreate = () => {
-  // const products = handleMealList()
-  console.log(products)
-
   Category.createDataApi({
     id: 0,
     name: formData.name,
-    text: formData.text
-    // products
+    text: formData.text,
+    products: formData.mealList
   })
     .then(() => {
       ElMessage.success("新增成功")
-      getCategoryData()
+      resetData()
     })
     .finally(() => {
       dialogVisible.value = false
@@ -101,9 +91,9 @@ const handleCreate = () => {
 //#endregion
 
 //#region 删
-const handleDelete = (row: ReadData) => {
+const handleDelete = (row?: ReadData) => {
   let text = ""
-  let ids: string[]
+  let ids: number[]
   if (row) {
     text = `正在刪除分類:${row.name}，確認刪除？`
     ids = [row.id]
@@ -111,7 +101,7 @@ const handleDelete = (row: ReadData) => {
     text = `正在批量刪除分類，確認刪除？`
     const selections = tableRef.value?.getSelectionRows()
     if (!selections.length) return
-    ids = selections.map((item) => item.id)
+    ids = selections.map((item: ReadData) => item.id)
   }
 
   ElMessageBox.confirm(text, "提示", {
@@ -122,7 +112,7 @@ const handleDelete = (row: ReadData) => {
     Category.deleteDataApi(ids)
       .then(() => {
         ElMessage.success("删除成功")
-        getCategoryData()
+        resetData()
       })
       .finally(() => {
         dialogVisible.value = false
@@ -133,18 +123,16 @@ const handleDelete = (row: ReadData) => {
 
 //#region 改
 const handleUpdate = () => {
-  const products = handleMealList()
-  console.log(products)
-
+  if (!currentUpdateId.value) return
   Category.updateDataApi({
     id: currentUpdateId.value,
     name: formData.name,
-    text: formData.text
-    // products
+    text: formData.text,
+    products: formData.mealList
   })
     .then(() => {
       ElMessage.success("修改成功")
-      getCategoryData()
+      resetData()
     })
     .finally(() => {
       dialogVisible.value = false
@@ -160,6 +148,11 @@ getCategoryData()
 const { mealListData } = storeToRefs(useMealsStore())
 const { getMealData } = useMealsStore()
 getMealData()
+
+const resetData = () => {
+  getCategoryData()
+  getMealData()
+}
 //#endregion
 
 //#region 過濾
@@ -171,7 +164,7 @@ const resetSearch = () => {
   searchData.name = ""
 }
 
-const filterListData = computed<ReadResData>(() => {
+const filterListData = computed<ReadData[]>(() => {
   return categoryListData.value.filter((item) => item.name.indexOf(searchData.name) > -1)
 })
 watch(
@@ -196,7 +189,7 @@ watch(
   },
   { immediate: true }
 )
-const pagefilterListData = computed<ReadResData>(() => {
+const pagefilterListData = computed<ReadData[]>(() => {
   return filterListData.value.filter((item, index) => index >= startIndex.value && index <= endIndex.value)
 })
 //#endregion
@@ -225,7 +218,7 @@ const pagefilterListData = computed<ReadResData>(() => {
             <el-button type="primary" :icon="Download" circle />
           </el-tooltip> -->
           <el-tooltip content="刷新當前頁">
-            <el-button type="primary" :icon="RefreshRight" circle @click="getCategoryData" />
+            <el-button type="primary" :icon="RefreshRight" circle @click="resetData()" />
           </el-tooltip>
         </div>
       </div>

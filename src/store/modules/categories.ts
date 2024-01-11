@@ -2,14 +2,14 @@ import { ref } from "vue"
 import store from "@/store"
 import { defineStore } from "pinia"
 
-import { type ReadResData } from "@/api/category-list/types/category"
+import { type ReadData } from "@/api/category-list/types/category"
 import * as Category from "@/api/category-list/"
 
 import Sortable from "sortablejs"
 
 export const useCategoriesStore = defineStore("categories", () => {
   const loading = ref<boolean>(false)
-  const categoryListData = ref<ReadResData>([])
+  const categoryListData = ref<ReadData[]>([])
 
   //#region sort
   const initSort = () => {

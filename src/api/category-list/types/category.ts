@@ -2,12 +2,14 @@ export interface CreateReqData {
   id: number
   name: string
   text: string
+  products: number[]
 }
 
 export interface UpdateReqData {
   id: number
   name: string
   text: string
+  products: number[]
 }
 
 export interface Product {
