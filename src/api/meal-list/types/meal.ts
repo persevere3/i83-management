@@ -1,62 +1,33 @@
-// interface option {
-//   optionName: string
-//   optionPrice: number
-// }
+import * as Select from "@/api/select-list/types/select"
+import * as Category from "@/api/category-list/types/category"
 
-interface Select {
-  selectName: string
-  showOptionList: string[]
-  max: number
-  min: number
-}
-
-export interface CreateMealRequestData {
+export interface CreateReqData {
   id: number
-  // CategoryList
-  categorys?: string[]
+  categorys?: number[]
   mealName: string
   image?: string
   file: any
   origin?: string
-  selectList?: Select[]
   mealTextList?: string[]
-  price: number
+  selectList?: Select.MealReadData[]
+  price: number | undefined
   count?: string
   enable?: number
 }
 
-export interface UpdateMealRequestData {
-  categoryList: string[]
+// UpdateReqData ?
+
+export interface ReadData {
+  id: number
+  category: Omit<Category.ReadData, "products">[]
   mealName: string
+  image: string
   origin: string
   mealTextList: string[]
-  selectList?: Select[]
+  selectList: Select.MealReadData[]
   price: number
+  count: string
+  enable: number
 }
 
-export interface GetMealRequestData {
-  /** 当前页码 */
-  // currentPage: number
-  /** 查询条数 */
-  // size: number
-
-  /** 查询参数：分類名稱 */
-  mealName?: string
-}
-
-export type GetMealResponseData = CreateMealRequestData[]
-
-// test
-export interface GetMealData {
-  categoryList: string[]
-  mealName: string
-  origin: string
-  mealTextList: string[]
-  selectList?: Select[]
-  price: number
-}
-
-// export type GetMealResponseData = ApiResponseData<{
-//   list: CreateMealRequestData[]
-//   total: number
-// }>
+export type ReadResData = ReadData[]

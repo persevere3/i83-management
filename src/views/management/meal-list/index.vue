@@ -1,32 +1,18 @@
 <script lang="ts" setup>
-import { reactive, ref, watch, computed } from "vue"
+import { ref, reactive, computed, watch, nextTick } from "vue"
+
+import { type ReadData as MealReadData, type CreateReqData } from "@/api/meal-list/types/meal"
+import { type MealReadData as SelectMealReadData } from "@/api/select-list/types/select"
+import * as Meal from "@/api/meal-list"
+import * as Category from "@/api/category-list"
 
 import { storeToRefs } from "pinia"
-
-// import { createTableDataApi, deleteTableDataApi, updateTableDataApi, getTableDataApi } from "@/api/table"
-import { type GetMealData, CreateMealRequestData } from "@/api/meal-list/types/meal"
-import { createMealDataApi, deleteMealDataApi } from "@/api/meal-list"
-
 import { useMealsStore } from "@/store/modules/meals"
+import { useCategoriesStore } from "@/store/modules/categories"
 import { useSelectsStore } from "@/store/modules/selects"
 
-import { type FormInstance, type FormRules, type TableInstance, ElMessage, ElMessageBox } from "element-plus"
+import { type FormInstance, type TableInstance, ElMessage, ElMessageBox } from "element-plus"
 import { Refresh, CirclePlus, Delete, RefreshRight, Plus } from "@element-plus/icons-vue"
-// import { Search, Refresh, CirclePlus, Delete, Download, RefreshRight } from "@element-plus/icons-vue"
-
-//#region upload
-import { genFileId } from "element-plus"
-import type { UploadInstance, UploadProps, UploadRawFile } from "element-plus"
-
-const upload = ref<UploadInstance>()
-
-const handleExceed: UploadProps["onExceed"] = (files) => {
-  upload.value!.clearFiles()
-  const file = files[0] as UploadRawFile
-  file.uid = genFileId()
-  upload.value!.handleStart(file)
-}
-//#endregion
 
 import { usePagination } from "@/hooks/usePagination"
 import { useNumberFormat } from "@/hooks/useNumberFormat"
@@ -36,320 +22,391 @@ defineOptions({
   name: "MealList"
 })
 
-const { loading } = storeToRefs(useMealsStore())
-
-const { selectListData } = storeToRefs(useSelectsStore())
-const { getSelectData } = useSelectsStore()
-
-getSelectData()
-
 const { paginationData, handleCurrentChange, handleSizeChange } = usePagination()
-
 const { thousandsSeparatorFormat } = useNumberFormat()
 
-//#region 增
+//#region table
+const tableRef = ref<TableInstance>()
+//#endregion
+
+//#region 新增/修改 dialog form
 const dialogVisible = ref<boolean>(false)
-const formRef = ref<FormInstance | null>(null)
-interface Select {
-  selectName: string
-  showOptionList: string[]
-  max: number
-  min: number
-}
-const formData = reactive<{
-  categoryList: string[]
-  mealName: string
-  origin: string
-  mealTextList: string[]
-  selectList: Select[]
-  price: number
-}>({
-  categoryList: [],
+
+const isBatchUpdate = ref(false)
+const currentUpdateId = ref<number>()
+
+const formRef = ref<FormInstance>()
+const activeSelectIdList = ref<number[]>([])
+watch(activeSelectIdList, (newData, originData) => {
+  const newFormdataSelectList: SelectMealReadData[] = []
+  newData.forEach((item) => {
+    const originId = originData.find((item2) => item2 === item)
+    let newItem: SelectMealReadData | undefined
+    if (originId) {
+      newItem = formData.selectList?.find((item2) => item2.id === item)
+    } else {
+      newItem = selectListData.value
+        ?.map((item3) => {
+          return {
+            id: item3.id,
+            selectName: item3.title,
+            showOptionList: item3.optionList,
+            max: item3.max,
+            min: item3.min
+          }
+        })
+        ?.find((item2) => item2.id === item)
+    }
+    if (newItem) newFormdataSelectList.push(JSON.parse(JSON.stringify(newItem)))
+  })
+  formData.selectList = newFormdataSelectList
+})
+const formData = reactive<Omit<CreateReqData, "id">>({
+  categorys: [],
   mealName: "",
+  file: "",
   origin: "",
   mealTextList: [],
   selectList: [],
-  price: 0
+  price: undefined,
+  count: "",
+  enable: 1
 })
-const image = ref<string>("")
-const formDataSelectList = ref<string[]>([])
-const formRules: FormRules = reactive({
-  mealName: [{ required: true, trigger: "blur", message: "请输入餐點名稱" }],
-  origin: [{ required: false, trigger: "blur", message: "请输入肉品來源" }],
-  mealTextList: [{ required: false, trigger: "blur", message: "请输入餐點說明" }],
-  price: [{ required: true, trigger: "blur", message: "请输入價錢" }]
+const formRules: any = reactive({
+  mealName: [{ required: true, trigger: "blur", message: "請輸入餐點名稱" }],
+  file: [{ required: true, trigger: "blur", message: "請上傳餐點圖片" }],
+  price: [{ required: true, trigger: "blur", message: "請輸入價錢" }]
 })
-const addFormDataMealText = () => {
-  formData.mealTextList.push("")
+const isFormdataReset = reactive<{ [propName: string]: boolean }>({
+  categorys: false,
+  // image: false,
+  origin: false,
+  mealTextList: false,
+  selectList: false,
+  count: false
+})
+
+//#region image
+// show
+const image = ref<any>("")
+const demoImage = computed(() => {
+  if (image.value) {
+    if (image.value.indexOf("base64") > -1) return image.value
+    else return "http://192.168.6.239" + image.value
+  } else return ""
+})
+
+// formData.file => image.value
+const reader = new FileReader()
+reader.addEventListener("load", () => {
+  image.value = reader.result
+})
+watch(
+  () => formData.file,
+  () => {
+    if (formData.file) reader.readAsDataURL(formData.file)
+    else image.value = ""
+  }
+)
+const inputHandler = (event: any) => {
+  const img = event.target.files[0]
+  if (!img) return
+  if (img.type !== "image/jpg" && img.type !== "image/jpeg" && img.type !== "image/png") {
+    ElMessage.error("格式錯誤!")
+    return
+  }
+  formData.file = event.target.files[0]
+  event.target.value = ""
+}
+const deleteImg = () => {
+  formData.file = ""
+}
+//#endregion
+
+const batchMeals = ref<MealReadData[]>([])
+const openDialog = (row?: MealReadData, batchUpdate?: boolean) => {
+  if (batchUpdate) {
+    const selections = tableRef.value?.getSelectionRows()
+    if (!selections.length) return
+    batchMeals.value = mealListData.value.filter((item: MealReadData) =>
+      selections.find((item2: MealReadData) => item2.id === item.id)
+    )
+  } else batchMeals.value = []
+  isBatchUpdate.value = batchUpdate ? true : false
+
+  if (row) {
+    // 修改餐點
+    currentUpdateId.value = row.id
+    formData.categorys = JSON.parse(JSON.stringify(row.category.map((item) => item.id)))
+    formData.mealName = row.mealName
+
+    formData.file = ""
+    formRules.file[0].required = false
+    setTimeout(() => {
+      image.value = row.image
+    }, 0)
+
+    formData.origin = row.origin
+    formData.mealTextList = JSON.parse(JSON.stringify(row.mealTextList))
+
+    formData.selectList = JSON.parse(JSON.stringify(row.selectList))
+    activeSelectIdList.value = row.selectList?.map((item) => item.id)
+
+    formData.price = row.price
+    formData.count = row.count
+    formData.enable = row.enable
+  } else {
+    // 新增餐點 or 批量修改餐點
+    formRef.value?.resetFields()
+    currentUpdateId.value = undefined
+    for (const key in isFormdataReset) isFormdataReset[key] = false
+
+    formData.categorys = []
+    // 選中某分類下新增餐點
+    if (!batchUpdate && activeCategory.value !== 0) formData.categorys[0] = activeCategory.value
+
+    formData.mealName = ""
+
+    formData.file = ""
+    formRules.file[0].required = true
+
+    formData.origin = ""
+    formData.mealTextList = []
+
+    activeSelectIdList.value = []
+
+    formData.price = undefined
+    formData.count = ""
+    formData.enable = 1
+  }
+  dialogVisible.value = true
+
+  nextTick(() => {
+    const input: any = document.querySelector("input[type=file]")
+    input?.removeEventListener("input", inputHandler)
+    input?.addEventListener("input", inputHandler)
+  })
 }
 
-const handleCreate = () => {
-  formData.mealTextList = formData.mealTextList.filter((item) => item)
-  // fields ???
+const addFormDataMealText = () => {
+  formData.mealTextList?.push("")
+}
+
+const handleConfirm = () => {
+  formData.mealTextList = formData.mealTextList?.filter((item) => item)
   formRef.value?.validate((valid: boolean, fields) => {
     if (valid) {
       if (currentUpdateId.value === undefined) {
-        mealListData.value.push(JSON.parse(JSON.stringify(formData)))
-        ElMessage.success("新增成功")
-        getMealData()
-        dialogVisible.value = false
-        // api ==================================================
-        const createMealData: CreateMealRequestData = {
-          id: 0,
-          // Categorys: [1, 2],
-          mealName: "板腱牛",
-          file: image.value,
-          // Image: ''
-          // Origin: '美國'
-          // SelectList: ''
-          mealTextList: ["醬料擇一", "含義大利麵，蛋，蔬菜"],
-          price: 200
-          // Count: 50,
-          // Enable: 1
-        }
-        const createMealFormData = new FormData()
-        for (const [key, value] of Object.entries(createMealData)) {
-          if (Array.isArray(value)) createMealFormData.append(key, JSON.stringify(value))
-          else createMealFormData.append(key, value)
-        }
-        createMealDataApi(createMealFormData)
-          .then(() => {
-            ElMessage.success("新增成功")
-          })
-          .finally(() => {
-            dialogVisible.value = false
-          })
-      } else {
-        const index = mealListData.value.findIndex((item) => item.mealName === currentUpdateId.value)
-        index > -1 ? (mealListData.value[index] = JSON.parse(JSON.stringify(formData))) : null
-        ElMessage.success("修改成功")
-        getMealData()
-        dialogVisible.value = false
-
-        // updateTableDataApi({
-        //   id: currentUpdateId.value,
-        //   username: formData.username
-        // })
-        //   .then(() => {
-        //     ElMessage.success("修改成功")
-        //     getTableData()
-        //   })
-        //   .finally(() => {
-        //     dialogVisible.value = false
-        //   })
-      }
+        isBatchUpdate.value ? handleBatchUpdate() : handleCreate()
+      } else handleUpdate()
     } else {
       console.error("表單校驗不通過", fields)
     }
   })
 }
-const setForm = () => {
-  document.querySelector("input[type=file]")?.addEventListener("change", (event: any) => {
-    image.value = event.target.files[0]
-    // const reader = new FileReader()
-    // reader.readAsDataURL(event.target.files[0])
-    // reader.onload = function () {
-    //   image.value = reader.result
-    // }
-  })
-  // 新增餐點
-  if (!currentUpdateId.value) {
-    formData.categoryList = []
-    formData.mealName = ""
-    formData.origin = ""
-    formData.mealTextList = []
-    formData.price = 0
-  }
 
-  // 新增餐點 && 選中某分類
-  if (!currentUpdateId.value && activeCategory.value !== "全部") {
-    formData.categoryList[0] = activeCategory.value
+const objToFormData = (obj: { [propName: string]: any }) => {
+  const formData = new FormData()
+  for (const [key, value] of Object.entries(obj)) {
+    if (key === "categorys" && value !== "noChange") {
+      value.forEach((item: any) => {
+        formData.append(key, item)
+      })
+    } else if (Array.isArray(value)) formData.append(key, JSON.stringify(value))
+    else formData.append(key, value)
   }
-}
-const resetForm = () => {
-  currentUpdateId.value = undefined
-  formRef.value?.resetFields()
+  return formData
 }
 //#endregion
 
-//#region 選擇
-const selectDialogVisible = ref<boolean>(false)
-
-const batchSelect = () => {
-  const selections = tableRef.value?.getSelectionRows()
-  if (!selections.length) return
-
-  selectDialogVisible.value = true
-}
-const handleSelect = (row: GetMealData) => {
-  currentUpdateId.value = row.mealName
-  formData.mealName = row.mealName
-  formDataSelectList.value = JSON.parse(JSON.stringify(row.selectList?.map((select) => select.selectName) || []))
-  selectDialogVisible.value = true
-}
-const confirmSelect = () => {
-  if (currentUpdateId.value) {
-    const meal = mealListData.value.find((meal) => meal.mealName === currentUpdateId.value)
-    if (meal) meal.selectList = JSON.parse(JSON.stringify(formData.selectList))
-    ElMessage.success("修改選擇成功")
-  } else {
-    const selections = tableRef.value?.getSelectionRows()
-    selections.forEach((element: GetMealData) => {
-      element.selectList = JSON.parse(JSON.stringify(formData.selectList))
+//#region 增
+const handleCreate = () => {
+  Meal.createDataApi(
+    objToFormData({
+      id: 0,
+      ...formData
     })
-    ElMessage.success("批量添加選擇成功")
-  }
-
-  getMealData()
-  selectDialogVisible.value = false
-}
-const setSelectForm = () => {
-  // 批量添加選擇
-  if (!currentUpdateId.value) {
-    formData.mealName = ""
-    formDataSelectList.value = []
-  }
-}
-const resetSelectForm = () => {
-  currentUpdateId.value = undefined
-  formRef.value?.resetFields()
+  )
+    .then(() => {
+      ElMessage.success("新增成功")
+      resetData()
+    })
+    .finally(() => {
+      dialogVisible.value = false
+    })
 }
 //#endregion
 
 //#region 删
-const handleDelete = (row: GetMealData) => {
-  const text = (activeCategory.value === "全部" ? "從全部中" : "從分類中") + `刪除餐點:${row.mealName}，確認刪除？`
+const handleDelete = (row?: MealReadData) => {
+  let text = ""
+  let activeIds: number[]
+  if (row) {
+    text = (activeCategory.value === 0 ? "從全部中" : "從分類中") + `刪除餐點:${row.mealName}，確認刪除？`
+    activeIds = [row.id]
+  } else {
+    text = (activeCategory.value === 0 ? "從全部中" : "從分類中") + "批量刪除餐點，確認刪除？"
+    const selections = tableRef.value?.getSelectionRows()
+    if (!selections.length) return
+    activeIds = selections.map((item: any) => item.id)
+  }
 
   ElMessageBox.confirm(text, "提示", {
     confirmButtonText: "確定",
     cancelButtonText: "取消",
     type: "warning"
   }).then(() => {
-    if (activeCategory.value === "全部") {
-      mealListData.value = mealListData.value.filter((item) => item.mealName !== row.mealName)
+    if (activeCategory.value === 0) {
+      Meal.deleteDataApi(activeIds)
+        .then(() => {
+          ElMessage.success("删除成功")
+          resetData()
+        })
+        .finally(() => {
+          dialogVisible.value = false
+        })
     } else {
-      row.categoryList = row.categoryList.filter((item) => item !== activeCategory.value)
+      const category = categoryListData.value.find((item) => item.id === activeCategory.value)
+      if (!category) return
+      const products = category.products
+        .map((item) => item.id)
+        .filter((item2) => !activeIds.find((item3) => item3 === item2))
+      Category.updateDataApi({
+        id: category.id,
+        name: category.name,
+        text: category.text,
+        products
+      })
+        .then(() => {
+          ElMessage.success("删除成功")
+          resetData()
+        })
+        .finally(() => {
+          dialogVisible.value = false
+        })
     }
-    ElMessage.success("删除成功")
-    getMealData()
-  })
-}
-
-const testDeleteApi = () => {
-  deleteMealDataApi(54)
-    .then(() => {
-      ElMessage.success("刪除成功")
-    })
-    .finally(() => {})
-}
-
-const tableRef = ref<TableInstance | null>(null)
-const batchDelete = () => {
-  const selections = tableRef.value?.getSelectionRows()
-  if (!selections.length) return
-
-  const text = (activeCategory.value === "全部" ? "從全部中" : "從分類中") + "批量刪除餐點，確認刪除？"
-
-  ElMessageBox.confirm(text, "提示", {
-    confirmButtonText: "確定",
-    cancelButtonText: "取消",
-    type: "warning"
-  }).then(() => {
-    selections.forEach((element: GetMealData) => {
-      const index = mealListData.value.findIndex((item) => item.mealName === element.mealName)
-      if (index > -1) {
-        if (activeCategory.value === "全部") {
-          index > -1 ? mealListData.value.splice(index, 1) : null
-        } else {
-          mealListData.value[index].categoryList = mealListData.value[index].categoryList.filter(
-            (item) => item !== activeCategory.value
-          )
-        }
-      }
-    })
-
-    ElMessage.success("删除成功")
-    getMealData()
   })
 }
 //#endregion
 
 //#region 改
-const currentUpdateId = ref<undefined | string>(undefined)
-const handleUpdate = (row: GetMealData) => {
-  currentUpdateId.value = row.mealName
-  formData.categoryList = row.categoryList
-  formData.mealName = row.mealName
-  formData.origin = row.origin
-  formData.mealTextList = JSON.parse(JSON.stringify(row.mealTextList))
-  formData.price = row.price
-  dialogVisible.value = true
-}
+const handleUpdate = () => {
+  const updateFormData = JSON.parse(JSON.stringify(formData))
+  updateFormData.id = currentUpdateId.value
+  updateFormData.image = image.value
+  delete updateFormData.categorys
+  delete updateFormData.file
 
-const testUpdateApi = () => {
-  // api ==================================================
-  const createMealData: CreateMealRequestData = {
-    id: 0,
-    // Categorys: [1, 2],
-    mealName: "板腱牛",
-    file: image.value,
-    // Image: ''
-    // Origin: '美國'
-    // SelectList: ''
-    // MealTextList: ''
-    price: 200
-    // Count: 50,
-    // Enable: 1
-  }
-  const createMealFormData = new FormData()
-  for (const [key, value] of Object.entries(createMealData)) {
-    createMealFormData.append(key, value)
-  }
-  // updateMealDataApi(createMealFormData)
-  //   .then(() => {
-  //     ElMessage.success("修改成功")
-  //   })
-  //   .finally(() => {})
+  Meal.updateDataApi(
+    objToFormData({
+      categorys: formData.categorys,
+      products: [updateFormData],
+      file: formData.file
+    })
+  )
+    .then(() => {
+      ElMessage.success("修改成功")
+      resetData()
+    })
+    .finally(() => {
+      dialogVisible.value = false
+    })
+}
+const handleBatchUpdate = () => {
+  const newBatchMeal = JSON.parse(JSON.stringify(batchMeals.value))
+  newBatchMeal.forEach((item: any) => {
+    delete item.category
+    // item.image = isFormdataReset.image ? "" : item.image
+    item.mealTextList = isFormdataReset.mealTextList
+      ? []
+      : formData.mealTextList?.length
+      ? formData.mealTextList
+      : item.mealTextList
+    item.selectList = isFormdataReset.selectList
+      ? []
+      : formData.selectList?.length
+      ? formData.selectList
+      : item.selectList
+    item.origin = isFormdataReset.origin ? "" : formData.origin ? formData.origin : item.origin
+    item.price = formData.price ? formData.price : item.price
+    item.count = isFormdataReset.count ? "" : formData.count ? formData.count : item.count
+    item.enable = formData.enable
+  })
+
+  Meal.updateDataApi(
+    objToFormData({
+      categorys: isFormdataReset.categorys ? [] : formData.categorys?.length ? formData.categorys : "noChange",
+      products: newBatchMeal,
+      // file: isFormdataReset.image ? null : formData.file
+      file: formData.file
+    })
+  )
+    .then(() => {
+      ElMessage.success("修改成功")
+      resetData()
+    })
+    .finally(() => {
+      dialogVisible.value = false
+    })
 }
 //#endregion
 
 //#region 查
-const { mealListData } = storeToRefs(useMealsStore())
+const { loading, mealListData } = storeToRefs(useMealsStore())
 const { getMealData } = useMealsStore()
 getMealData()
 
-const searchFormRef = ref<FormInstance | null>(null)
+const activeCategory = ref(0)
+const { categoryListData } = storeToRefs(useCategoriesStore())
+const { getCategoryData } = useCategoriesStore()
+getCategoryData()
+
+watch([mealListData, categoryListData], () => {
+  if (mealListData && categoryListData) {
+    const products = JSON.parse(JSON.stringify(mealListData.value))
+    products.forEach((item: any) => {
+      delete item.category
+    })
+    if (categoryListData.value.find((item) => item.id === 0))
+      categoryListData.value.splice(0, 1, { id: 0, name: "全部", text: "", products })
+    else categoryListData.value.splice(0, 0, { id: 0, name: "全部", text: "", products })
+  }
+})
+
+const resetData = () => {
+  getMealData()
+  getCategoryData()
+}
+
+const { selectListData } = storeToRefs(useSelectsStore())
+const { getSelectData } = useSelectsStore()
+getSelectData()
+//#endregion
+
+//#region 過濾
+const searchFormRef = ref<FormInstance>()
 const searchData = reactive({
   mealName: ""
 })
-
-const handleSearch = () => {
-  paginationData.currentPage === 1 ? getMealData() : (paginationData.currentPage = 1)
-}
 const resetSearch = () => {
-  searchFormRef.value?.resetFields()
-  handleSearch()
+  searchData.mealName = ""
 }
 
-const categoryList = reactive(["全部", "人氣精選", "單打獨鬥區", "咖哩飯", "分進合擊區", "米食區", "游擊區"])
-const activeCategory = ref("全部")
-const filterMealListData = computed<GetMealData[]>(() => {
-  let list: GetMealData[]
-  if (activeCategory.value === "全部") list = mealListData.value
-  else list = mealListData.value.filter((item) => item.categoryList.find((item2) => item2 === activeCategory.value))
-  list = list.filter((item) => item.mealName.indexOf(searchData.mealName) > -1)
-  return list
+const filterListData = computed<MealReadData[]>(() => {
+  return mealListData.value
+    .filter((item) => activeCategory.value === 0 || item.category?.find((item2) => item2.id === activeCategory.value))
+    .filter((item) => item.mealName.indexOf(searchData.mealName) > -1)
 })
 watch(
-  filterMealListData,
+  filterListData,
   () => {
-    paginationData.total = filterMealListData.value.length
+    paginationData.total = filterListData.value.length
     paginationData.currentPage = 1
   },
   { immediate: true }
 )
 
-// startIndex, endIndex => pagefilterMealListData
+// startIndex, endIndex => pagefilterListData
 const startIndex = ref(0)
 const endIndex = ref(0)
 watch(
@@ -362,33 +419,10 @@ watch(
   },
   { immediate: true }
 )
-const pagefilterMealListData = computed<GetMealData[]>(() => {
-  const list: GetMealData[] = filterMealListData.value.filter(
-    (meal, index) => index >= startIndex.value && index <= endIndex.value
-  )
-  return list
+const pagefilterListData = computed<MealReadData[]>(() => {
+  return filterListData.value.filter((item, index) => index >= startIndex.value && index <= endIndex.value)
 })
 //#endregion
-
-watch(formDataSelectList, (list) => {
-  const newSelectList: Select[] = []
-  list.forEach((item) => {
-    const meal = mealListData.value.find((meal) => meal.mealName === formData.mealName)
-    const mealSelect = meal?.selectList?.find((select) => select.selectName === item)
-    if (mealSelect) {
-      newSelectList.push(JSON.parse(JSON.stringify(mealSelect)))
-    } else {
-      newSelectList.push({
-        selectName: item,
-        showOptionList: selectListData.value.find((select) => select.selectName === item)?.optionList || [],
-        max: 1,
-        min: 1
-      })
-    }
-  })
-
-  formData.selectList = JSON.parse(JSON.stringify(newSelectList))
-})
 </script>
 
 <template>
@@ -403,69 +437,77 @@ watch(formDataSelectList, (list) => {
         </el-form-item>
       </el-form>
     </el-card>
+    <!--  -->
     <el-card v-loading="loading" shadow="never">
       <div class="toolbar-wrapper">
         <div>
-          <el-button type="primary" :icon="CirclePlus" @click="dialogVisible = true">新增餐點</el-button>
-          <el-button type="warning" :icon="Delete" @click="batchSelect()">批量添加選擇</el-button>
-          <el-button type="danger" :icon="Delete" @click="batchDelete()">批量刪除</el-button>
-          <el-button type="danger" :icon="Delete" @click="testDeleteApi()">test刪除</el-button>
-          <el-button type="danger" :icon="Delete" @click="testUpdateApi()">test修改</el-button>
+          <el-button type="primary" :icon="CirclePlus" @click="openDialog()">新增餐點</el-button>
+          <el-button type="warning" :icon="CirclePlus" @click="openDialog(undefined, true)">批量修改餐點</el-button>
+          <el-button type="danger" :icon="Delete" @click="handleDelete()">批量刪除</el-button>
         </div>
         <div>
           <!-- <el-tooltip content="下载">
             <el-button type="primary" :icon="Download" circle />
           </el-tooltip> -->
           <el-tooltip content="刷新當前頁">
-            <el-button type="primary" :icon="RefreshRight" circle @click="getMealData" />
+            <el-button type="primary" :icon="RefreshRight" circle @click="resetData()" />
           </el-tooltip>
         </div>
       </div>
       <div class="toolbar-wrapper">
         <div>
           <el-button
-            v-for="item in categoryList"
-            :key="item"
-            :type="item === activeCategory ? 'success' : 'info'"
-            @click="activeCategory = item"
+            v-for="item in categoryListData"
+            :key="item.id"
+            :type="item.id === activeCategory ? 'success' : 'info'"
+            @click="activeCategory = item.id"
           >
-            {{ item }}
-            (<template v-if="item === '全部'"> {{ mealListData.length }} </template>
-            <template v-else>
-              {{ mealListData.filter((item2) => item2.categoryList.find((item3) => item3 === item)).length }} </template
-            >)
+            {{ item.name }}({{ item.products.length }})
           </el-button>
         </div>
       </div>
       <div class="table-wrapper">
         <!-- 必須加 row-key hover sortable 才不會有bug -->
-        <el-table ref="tableRef" :data="pagefilterMealListData" row-key="mealName">
+        <el-table ref="tableRef" :data="pagefilterListData" row-key="id">
           <el-table-column type="selection" width="50" align="center" />
-          <el-table-column label="餐點圖片" width="80" align="center" class="mealImg">
+          <el-table-column label="餐點圖片" width="80" align="center">
             <template #default="scope">
-              <div class="mealImg" :style="{ 'background-image': `url(/img/meals/${scope.row.mealName}.jpg)` }" />
+              <div class="mealImgContainer">
+                <img class="mealImg" :src="`http://192.168.6.239${scope.row.image}`" alt="" srcset="" />
+              </div>
             </template>
           </el-table-column>
-          <el-table-column prop="mealName" label="餐點名稱" align="center" />
-          <el-table-column prop="origin" label="肉品來源" align="center" />
+          <el-table-column label="餐點名稱 / 肉品來源" width="150" align="center">
+            <template #default="scope">
+              <div>{{ scope.row.mealName }}</div>
+              <div>{{ scope.row.origin }}</div>
+            </template>
+          </el-table-column>
           <el-table-column label="餐點說明" align="left">
             <template #default="scope">
-              <div v-for="item in scope.row.mealTextList" :key="item">{{ item }}</div>
+              <div v-for="item in scope.row.mealTextList" :key="item">- {{ item }}</div>
+            </template>
+          </el-table-column>
+          <el-table-column label="餐點選擇" align="left">
+            <template #default="scope">
+              <div v-for="item in scope.row.selectList" :key="item">- {{ item.selectName }}</div>
             </template>
           </el-table-column>
           <el-table-column label="價錢" width="100" align="center">
             <template #default="scope"> {{ thousandsSeparatorFormat(scope.row.price) }} </template>
           </el-table-column>
+          <el-table-column label="數量" width="100" align="center">
+            <template #default="scope"> {{ scope.row.count }} </template>
+          </el-table-column>
           <el-table-column prop="status" label="狀態" width="80" align="center">
             <template #default="scope">
-              <el-tag v-if="!scope.row.isShow" type="success" effect="plain">啟用</el-tag>
+              <el-tag v-if="scope.row.enable" type="success" effect="plain">啟用</el-tag>
               <el-tag v-else type="danger" effect="plain">禁用</el-tag>
             </template>
           </el-table-column>
-          <el-table-column fixed="right" label="操作" width="200" align="center">
+          <el-table-column fixed="right" label="操作" width="80" align="center">
             <template #default="scope">
-              <el-button type="primary" text bg size="small" @click="handleUpdate(scope.row)">修改</el-button>
-              <el-button type="warning" text bg size="small" @click="handleSelect(scope.row)">選擇</el-button>
+              <el-button type="primary" text bg size="small" @click="openDialog(scope.row)">修改</el-button>
               <el-button type="danger" text bg size="small" @click="handleDelete(scope.row)">删除</el-button>
             </template>
           </el-table-column>
@@ -487,101 +529,143 @@ watch(formDataSelectList, (list) => {
     <!-- 新增/修改 -->
     <el-dialog
       v-model="dialogVisible"
-      :title="currentUpdateId === undefined ? '新增餐點' : '修改餐點'"
-      @open="setForm"
-      @close="resetForm"
+      :title="
+        currentUpdateId === undefined
+          ? isBatchUpdate
+            ? '批量修改餐點 (請填寫或選擇要批量修改的欄位)'
+            : '新增餐點'
+          : '修改餐點'
+      "
       width="35%"
     >
-      <el-form ref="formRef" :model="formData" :rules="formRules" label-width="100px" label-position="left">
+      <el-form
+        ref="formRef"
+        :model="formData"
+        :rules="!isBatchUpdate ? formRules : {}"
+        label-width="100px"
+        label-position="left"
+      >
         <el-form-item prop="" label="餐點分類">
-          <el-select v-model="formData.categoryList" multiple placeholder="餐點分類" style="width: 100%">
-            <el-option v-for="item in categoryList" :key="item" v-show="item !== '全部'" :label="item" :value="item" />
-          </el-select>
-        </el-form-item>
-        <el-form-item prop="mealName" label="餐點名稱">
-          <el-input v-model="formData.mealName" placeholder="请输入餐點名稱" />
-        </el-form-item>
-        <el-form-item>
-          <el-upload
-            ref="uploadRef"
-            accept="image/jpg,image/jpeg,image/png"
-            :limit="1"
-            :on-exceed="handleExceed"
-            :auto-upload="false"
+          <el-switch v-if="isBatchUpdate" v-model="isFormdataReset.categorys" inactive-text="清除" />
+          <el-select
+            :disabled="isFormdataReset.categorys"
+            v-model="formData.categorys"
+            multiple
+            placeholder="餐點分類"
+            style="width: 100%"
           >
-            <el-button type="primary">select file</el-button>
-            <template #tip>
-              <div class="el-upload__tip text-red">limit 1 file, new file will cover the old file</div>
-            </template>
-          </el-upload>
-        </el-form-item>
-        <el-form-item prop="origin" label="肉品來源">
-          <el-input v-model="formData.origin" placeholder="请输入肉品來源" />
-        </el-form-item>
-        <el-form-item prop="" label="餐點說明">
-          <template v-for="(item, index) in formData.mealTextList" :key="index">
-            <el-input class="mealText" v-model="formData.mealTextList[index]" placeholder="请输入餐點說明" />
-          </template>
-          <el-tooltip content="新增說明">
-            <el-button type="primary" :icon="Plus" circle @click="addFormDataMealText" />
-          </el-tooltip>
-        </el-form-item>
-        <el-form-item prop="price" label="價錢">
-          <el-input v-model="formData.price" placeholder="请输入價錢" />
-        </el-form-item>
-      </el-form>
-      <template #footer>
-        <el-button @click="dialogVisible = false">取消</el-button>
-        <el-button type="primary" @click="handleCreate">確認</el-button>
-      </template>
-    </el-dialog>
-
-    <!-- 新增/修改 選擇 -->
-    <el-dialog
-      v-model="selectDialogVisible"
-      :title="currentUpdateId === undefined ? '批量添加選擇' : '修改選擇'"
-      @open="setSelectForm"
-      @close="resetSelectForm"
-      width="40%"
-    >
-      <el-form ref="formRef" :model="formData" :rules="formRules" label-width="100px" label-position="left">
-        <el-form-item v-if="formData.mealName" prop="mealName" label="餐點名稱">
-          <el-input v-model="formData.mealName" disabled />
-        </el-form-item>
-        <el-form-item prop="" label="選擇">
-          <el-select v-model="formDataSelectList" multiple placeholder="選擇" style="width: 100%">
             <el-option
-              v-for="item in selectListData"
-              :key="item.selectName"
-              :label="item.selectName"
-              :value="item.selectName"
+              v-for="item in categoryListData"
+              :key="item.id"
+              v-show="item.id !== 0"
+              :label="item.name"
+              :value="item.id"
             />
           </el-select>
         </el-form-item>
-        <template v-for="item in formData.selectList" :key="item.selectName">
+        <el-form-item v-if="!isBatchUpdate" prop="mealName" label="餐點名稱">
+          <el-input v-model="formData.mealName" placeholder="請輸入餐點名稱" />
+        </el-form-item>
+        <el-form-item v-if="!isBatchUpdate" prop="file" label="餐點圖片">
+          <!-- <el-switch v-if="isBatchUpdate" v-model="isFormdataReset.image" inactive-text="清除" /> -->
+          <el-button class="uploadBtn" type="primary" :icon="CirclePlus"
+            >上傳圖片
+            <input :disabled="isFormdataReset.image" class="uploadImg" type="file" ref="file" accept="image/*" />
+          </el-button>
+          <template v-if="image">
+            <img :src="demoImage" />
+            <el-button
+              type="danger"
+              class="deleteImgBtn"
+              :icon="Delete"
+              @click="!isFormdataReset.image ? deleteImg() : ''"
+            />
+          </template>
+        </el-form-item>
+        <el-form-item prop="origin" label="肉品來源">
+          <el-switch v-if="isBatchUpdate" v-model="isFormdataReset.origin" inactive-text="清除" />
+          <el-input :disabled="isFormdataReset.origin" v-model="formData.origin" placeholder="請輸入肉品來源" />
+        </el-form-item>
+        <el-form-item prop="" label="餐點說明" v-if="formData.mealTextList">
+          <el-switch v-if="isBatchUpdate" v-model="isFormdataReset.mealTextList" inactive-text="清除" />
+          <template v-for="(item, index) in formData.mealTextList" :key="index">
+            <el-input
+              :disabled="isFormdataReset.mealTextList"
+              v-model="formData.mealTextList[index]"
+              placeholder="請輸入餐點說明"
+            />
+          </template>
+          <el-tooltip content="新增說明">
+            <el-button
+              type="primary"
+              :icon="Plus"
+              circle
+              @click="!isFormdataReset.mealTextList ? addFormDataMealText() : ''"
+            />
+          </el-tooltip>
+        </el-form-item>
+        <el-form-item prop="" label="餐點選擇">
+          <el-switch v-if="isBatchUpdate" v-model="isFormdataReset.selectList" inactive-text="清除" />
+          <el-select
+            :disabled="isFormdataReset.selectList"
+            v-model="activeSelectIdList"
+            multiple
+            placeholder="餐點選擇"
+            style="width: 100%"
+          >
+            <el-option v-for="item in selectListData" :key="item.id" :label="item.title" :value="item.id" />
+          </el-select>
+        </el-form-item>
+        <template v-for="item in formData.selectList" :key="item.id">
           <el-form-item :prop="item.selectName" :label="item.selectName">
-            <el-checkbox-group v-model="item.showOptionList">
+            <el-checkbox-group :disabled="isFormdataReset.selectList" v-model="item.showOptionList">
               <el-checkbox
-                v-for="option in selectListData.find((select) => select.selectName === item.selectName)?.optionList"
+                v-for="option in selectListData.find((select) => select.id === item.id)?.optionList"
                 :key="option"
                 :label="option"
               />
             </el-checkbox-group>
-
             <div class="mt-3">
               最少選擇
-              <el-input-number class="mx-1" v-model="item.min" :min="0" :max="item.max" /> 項
+              <el-input-number
+                :disabled="isFormdataReset.selectList"
+                class="mx-1"
+                v-model="item.min"
+                :min="0"
+                :max="item.max"
+              />
+              項
             </div>
             <div class="mt-3">
               最多選擇
-              <el-input-number class="mx-1" v-model="item.max" :min="1" :max="item.showOptionList.length" /> 項
+              <el-input-number
+                :disabled="isFormdataReset.selectList"
+                class="mx-1"
+                v-model="item.max"
+                :min="1"
+                :max="item.showOptionList.length"
+              />
+              項
             </div>
           </el-form-item>
         </template>
+        <el-form-item prop="price" label="價錢">
+          <el-input v-model="formData.price" placeholder="請輸入價錢" />
+        </el-form-item>
+        <el-form-item prop="count" label="數量">
+          <el-switch v-if="isBatchUpdate" v-model="isFormdataReset.count" inactive-text="清除" />
+          <el-input :disabled="isFormdataReset.count" type="number" v-model="formData.count" placeholder="請輸入數量" />
+        </el-form-item>
+        <el-form-item prop="enable" label="狀態">
+          <el-select v-model="formData.enable" placeholder="狀態" style="width: 100%">
+            <el-option label="啟用" :value="1" />
+            <el-option label="禁用" :value="0" />
+          </el-select>
+        </el-form-item>
       </el-form>
       <template #footer>
-        <el-button @click="selectDialogVisible = false">取消</el-button>
-        <el-button type="primary" @click="confirmSelect">確認</el-button>
+        <el-button @click="dialogVisible = false">取消</el-button>
+        <el-button type="primary" @click="handleConfirm()">確認</el-button>
       </template>
     </el-dialog>
   </div>
@@ -601,21 +685,37 @@ watch(formDataSelectList, (list) => {
   margin-bottom: 20px;
 }
 
+.el-button {
+  margin-left: 0;
+  margin-right: 12px;
+  margin-bottom: 6px;
+}
+.cell {
+  .el-button {
+    margin: 0px;
+
+    &:first-child {
+      margin-bottom: 6px;
+    }
+  }
+}
+
 .table-wrapper {
   margin-bottom: 20px;
+}
+.mealImgContainer {
+  display: flex;
+  align-items: center;
+
+  .mealImg {
+    width: 50px;
+    height: 50px;
+  }
 }
 
 .pager-wrapper {
   display: flex;
   justify-content: flex-end;
-}
-
-.mealImg {
-  width: 50px;
-  height: 50px;
-  margin: 0 auto;
-  background-size: cover;
-  background-position: center;
 }
 
 .el-form-item__content {
@@ -624,7 +724,31 @@ watch(formDataSelectList, (list) => {
   }
 }
 
+.uploadBtn {
+  margin-bottom: 0;
+  position: relative;
+
+  input {
+    width: 100%;
+    height: 100%;
+    position: absolute;
+    top: 0;
+    left: 0;
+    opacity: 0;
+  }
+}
+.uploadImg {
+  height: 60px;
+}
+.deleteImgBtn {
+  margin-left: 12px;
+  margin-bottom: 0;
+}
+
 .el-checkbox-group {
+  width: 100%;
+}
+.el-switch {
   width: 100%;
 }
 </style>
