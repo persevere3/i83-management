@@ -141,10 +141,13 @@ const handleUpdate = () => {
 //#region status
 const statusDialogVisible = ref<boolean>(false)
 const enable = ref<boolean | null>(null)
-const statusFormRef = ref<FormInstance | null>(null)
-const statusFormData = reactive({
+const statusFormRef = ref<FormInstance>()
+const statusFormData = reactive<{
+  storeName: string
+  id: number | ""
+}>({
   storeName: "",
-  id: 0
+  id: ""
 })
 const statusFormRules: FormRules = reactive({
   storeName: [{ required: true, trigger: "blur", message: "請選擇分店" }],
@@ -154,7 +157,7 @@ const openStatusDialog = (isEnable: boolean) => {
   statusFormRef.value?.resetFields()
   enable.value = isEnable
   statusFormData.storeName = ""
-  statusFormData.id = 0
+  statusFormData.id = ""
   if (activeStore.value !== "全部") statusFormData.storeName = activeStore.value
   statusDialogVisible.value = true
 }
@@ -170,7 +173,8 @@ const handleStatusConfirm = () => {
   })
 }
 
-const handleEnable = (id: number) => {
+const handleEnable = (id: number | "") => {
+  if (!id) return
   const table = tableListData.value.find((item) => item.id === id)
   if (!table) return
   const text = `開啟${table.storeName}分店-桌號${table.number}，確認開啟？`
@@ -189,7 +193,7 @@ const handleEnable = (id: number) => {
       })
   })
 }
-const handleDisable = (id: number) => {
+const handleDisable = (id: number | "") => {
   const table = tableListData.value.find((item) => item.id === id)
   if (!table) return
   const text = `關閉${table.storeName}分店-桌號${table.number}，確認關閉？`

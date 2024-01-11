@@ -81,15 +81,6 @@ export const constantRoutes: RouteRecordRaw[] = [
         }
       },
       {
-        path: "meal-list",
-        component: () => import("@/views/management/meal-list/index.vue"),
-        name: "MealList",
-        meta: {
-          title: "餐點管理",
-          keepAlive: true
-        }
-      },
-      {
         path: "select-list",
         component: () => import("@/views/management/select-list/index.vue"),
         name: "SelectList",
@@ -99,11 +90,11 @@ export const constantRoutes: RouteRecordRaw[] = [
         }
       },
       {
-        path: "order-list",
-        component: () => import("@/views/management/order-list/index.vue"),
-        name: "OrdertList",
+        path: "meal-list",
+        component: () => import("@/views/management/meal-list/index.vue"),
+        name: "MealList",
         meta: {
-          title: "訂單管理",
+          title: "餐點管理",
           keepAlive: true
         }
       },
@@ -112,7 +103,16 @@ export const constantRoutes: RouteRecordRaw[] = [
         component: () => import("@/views/management/table-list/index.vue"),
         name: "TabletList",
         meta: {
-          title: "顧客管理",
+          title: "桌號管理",
+          keepAlive: true
+        }
+      },
+      {
+        path: "order-list",
+        component: () => import("@/views/management/order-list/index.vue"),
+        name: "OrdertList",
+        meta: {
+          title: "訂單管理",
           keepAlive: true
         }
       }
