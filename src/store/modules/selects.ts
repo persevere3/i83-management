@@ -2,14 +2,14 @@ import { ref } from "vue"
 import store from "@/store"
 import { defineStore } from "pinia"
 
-import { type ReadResData } from "@/api/select-list/types/select"
+import { type ReadData } from "@/api/select-list/types/select"
 import * as Select from "@/api/select-list/"
 
 import Sortable from "sortablejs"
 
 export const useSelectsStore = defineStore("selects", () => {
   const loading = ref<boolean>(false)
-  const selectListData = ref<ReadResData>([])
+  const selectListData = ref<ReadData[]>([])
 
   //#region sort
   const initSort = () => {

@@ -1,7 +1,7 @@
 <script lang="ts" setup>
 import { ref, reactive, computed, watch } from "vue"
 
-import { type ReadData, type ReadResData } from "@/api/select-list/types/select"
+import { type ReadData } from "@/api/select-list/types/select"
 import * as Select from "@/api/select-list/"
 
 import { storeToRefs } from "pinia"
@@ -26,9 +26,9 @@ const tableRef = ref<TableInstance | null>(null)
 //#region 新增/修改 dialog form
 const dialogVisible = ref<boolean>(false)
 
-const currentUpdateId = ref<number>(null)
+const currentUpdateId = ref<number>()
 
-const formRef = ref<FormInstance | null>(null)
+const formRef = ref<FormInstance>()
 const formData = reactive<{
   name: string
   optionList: string[]
@@ -92,9 +92,9 @@ const handleCreate = () => {
 //#endregion
 
 //#region 删
-const handleDelete = (row: ReadData) => {
+const handleDelete = (row?: ReadData) => {
   let text = ""
-  let ids: string[]
+  let ids: number[]
   if (row) {
     text = `正在刪除選擇:${row.title}，確認刪除？`
     ids = [row.id]
@@ -102,7 +102,7 @@ const handleDelete = (row: ReadData) => {
     text = `正在批量刪除選擇，確認刪除？`
     const selections = tableRef.value?.getSelectionRows()
     if (!selections.length) return
-    ids = selections.map((item) => item.id)
+    ids = selections.map((item: ReadData) => item.id)
   }
 
   ElMessageBox.confirm(text, "提示", {
@@ -124,12 +124,15 @@ const handleDelete = (row: ReadData) => {
 
 //#region 改
 const handleUpdate = () => {
+  if (!currentUpdateId.value) return
+  const select = selectListData.value.find((item) => item.id === currentUpdateId.value)
+  if (!select) return
   Select.updateDataApi({
     id: currentUpdateId.value,
     title: formData.name,
     optionList: JSON.stringify(formData.optionList),
-    max: 1,
-    min: 1
+    max: select.max,
+    min: select.min
   })
     .then(() => {
       ElMessage.success("修改成功")
@@ -156,7 +159,7 @@ const resetSearch = () => {
   searchData.name = ""
 }
 
-const filterListData = computed<ReadResData>(() => {
+const filterListData = computed<ReadData[]>(() => {
   return selectListData.value.filter((item) => item.title.indexOf(searchData.name) > -1)
 })
 watch(
@@ -181,7 +184,7 @@ watch(
   },
   { immediate: true }
 )
-const pagefilterListData = computed<ReadResData>(() => {
+const pagefilterListData = computed<ReadData[]>(() => {
   return filterListData.value.filter((item, index) => index >= startIndex.value && index <= endIndex.value)
 })
 //#endregion

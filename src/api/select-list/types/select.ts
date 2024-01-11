@@ -19,6 +19,14 @@ export interface UpdateReqData {
   min: number
 }
 
+export interface MealReadData {
+  id: number
+  selectName: string
+  showOptionList: string[]
+  max: number
+  min: number
+}
+
 export interface ReadData {
   id: number
   title: string
