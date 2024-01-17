@@ -4,14 +4,15 @@ import { ref, reactive, watch, computed } from "vue"
 import { type ReadData } from "@/api/table-list/types/table"
 import * as Table from "@/api/table-list"
 
+import { storeToRefs } from "pinia"
+import { useTablesStore } from "@/store/modules/tables"
+
 import { type FormInstance, type FormRules, type TableInstance, ElMessage, ElMessageBox } from "element-plus"
 import { Refresh, CirclePlus, Delete, RefreshRight } from "@element-plus/icons-vue"
 
 import { usePagination } from "@/hooks/usePagination"
 
 import QRCodeVue3 from "qrcode-vue3"
-
-import Sortable from "sortablejs"
 
 defineOptions({
   // 命名当前组件
@@ -220,41 +221,21 @@ const handleDisable = (id: number | "") => {
 }
 //#endregion
 
-//#region sort
-const initSort = () => {
-  const table: HTMLElement | null = document.querySelector(".el-table__body tbody")
-  if (!table) return
-
-  Sortable.create(table, {
-    animation: 200, // 拖拽延时，效果更好看
-    onEnd: (event: any) => {
-      // 进行数据的处理，拖拽实际并不会改变绑定数据的顺序
-      const { oldIndex, newIndex } = event
-      const currentRow = tableListData.value?.splice(oldIndex, 1)[0]
-      tableListData.value?.splice(newIndex, 0, currentRow)
-    }
-  })
-}
-//#endregion
-
 //#region 查
-const loading = ref<boolean>(false)
-const tableListData = ref<ReadData[]>([])
-const getTableData = () => {
-  loading.value = true
-  Table.getDataApi()
-    .then((res) => {
-      tableListData.value = res
-      const f = false
-      if (f) initSort()
-    })
-    .catch(() => {
-      tableListData.value = []
-    })
-    .finally(() => {
-      loading.value = false
-    })
-}
+const tableEnableArr = [
+  {
+    label: "未啟用"
+  },
+  {
+    label: "已啟用"
+  },
+  {
+    label: "已新增訂單"
+  }
+]
+
+const { loading, tableListData } = storeToRefs(useTablesStore())
+const { getTableData } = useTablesStore()
 getTableData()
 //#endregion
 
@@ -327,10 +308,10 @@ const pagefilterListData = computed<ReadData[]>(() => {
         <div>
           <el-button type="primary" :icon="CirclePlus" @click="openDialog()">新增桌號</el-button>
           <el-button class="mr-20" type="danger" :icon="Delete" @click="handleDelete()">批量刪除</el-button>
-          <el-button type="primary" :icon="CirclePlus" @click="openStatusDialog(true)">開啟桌號</el-button>
-          <el-button type="danger" :icon="Delete" @click="openStatusDialog(false)">關閉桌號</el-button>
         </div>
         <div>
+          <el-button type="primary" :icon="CirclePlus" @click="openStatusDialog(true)">開啟桌號</el-button>
+          <el-button type="danger" :icon="Delete" @click="openStatusDialog(false)">關閉桌號</el-button>
           <el-tooltip content="刷新當前頁">
             <el-button type="primary" :icon="RefreshRight" circle @click="getTableData" />
           </el-tooltip>
@@ -365,7 +346,7 @@ const pagefilterListData = computed<ReadData[]>(() => {
             }})
           </el-button>
           <el-button :type="activeStatus === false ? 'success' : 'info'" @click="activeStatus = false">
-            禁用 ({{
+            未啟用 ({{
               tableListData
                 .filter((item) => activeStore === "全部" || item.storeName === activeStore)
                 .filter((item) => !item.enable).length
@@ -386,18 +367,25 @@ const pagefilterListData = computed<ReadData[]>(() => {
                   myclass="qrcode"
                   :width="50"
                   :height="50"
-                  :value="`https://i83.vercel.app/${scope.row.number}-${scope.row.orderToken}`"
+                  :value="`https://i83.vercel.app/?queryToken=${scope.row.orderToken}`"
                   :dotsOptions="{ type: 'classy' }"
                 />
               </router-link>
             </template>
           </el-table-column>
-          <el-table-column prop="status" label="狀態" width="80" align="center">
+          <el-table-column prop="status" label="狀態" width="120" align="center">
             <template #default="scope">
-              <el-tag v-if="scope.row.enable" type="success" effect="plain" @click="handleDisable(scope.row.id)"
-                >啟用</el-tag
+              <el-tag
+                v-if="scope.row.enable"
+                type="success"
+                effect="plain"
+                @click="scope.row.enable === 1 ? handleDisable(scope.row.id) : ''"
               >
-              <el-tag v-else type="danger" effect="plain" @click="handleEnable(scope.row.id)">禁用</el-tag>
+                {{ tableEnableArr[scope.row.enable].label }}
+              </el-tag>
+              <el-tag v-else type="danger" effect="plain" @click="handleEnable(scope.row.id)">
+                {{ tableEnableArr[scope.row.enable].label }}
+              </el-tag>
             </template>
           </el-table-column>
           <el-table-column fixed="right" label="操作" width="200" align="center">
@@ -458,7 +446,9 @@ const pagefilterListData = computed<ReadData[]>(() => {
             <el-option
               v-for="item in tableListData"
               :key="item.id"
-              v-show="item.storeName === statusFormData.storeName && (enable === true ? !item.enable : item.enable)"
+              v-show="
+                item.storeName === statusFormData.storeName && (enable === true ? !item.enable : item.enable === 1)
+              "
               :label="item.number"
               :value="item.id"
             />

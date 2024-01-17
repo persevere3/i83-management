@@ -40,7 +40,7 @@ Table.getDataApi()
       <QRCodeVue3
         myclass="qrcode"
         v-if="activeTable.number"
-        :value="`https://i83.vercel.app/${activeTable.number}-${activeTable.orderToken}`"
+        :value="`https://i83.vercel.app/?queryToken=${activeTable.orderToken}`"
         :dotsOptions="{ type: 'classy' }"
       />
     </el-card>
