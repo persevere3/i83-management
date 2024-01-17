@@ -1,38 +1,44 @@
-import { request } from "@/utils/service"
+import { requestJson } from "@/utils/service"
 import type * as Order from "./types/order"
 
-/** 增 */
-export function createOrderDataApi(data: Order.CreateOrderRequestData) {
-  return request({
-    url: "table",
-    method: "post",
-    data
+/** 删 */
+export function deleteDataApi(ids: string[]) {
+  return requestJson({
+    url: `OrderInfos`,
+    method: "delete",
+    data: ids
   })
 }
 
-/** 删 */
-export function deleteOrderDataApi(id: string) {
-  return request({
-    url: `table/${id}`,
-    method: "delete"
+/** 確認付款 */
+export function confirmPayApi(orderId: string) {
+  return requestJson({
+    url: `OrderInfos/ComfirmPay?OrderId=${orderId}`,
+    method: "post"
+  })
+}
+
+/** 取消 */
+export function cancelDataApi(orderId: string) {
+  return requestJson({
+    url: `OrderInfos/CancelOrder?OrderId=${orderId}`,
+    method: "post"
   })
 }
 
 /** 改 */
-export function updateOrderDataApi(data: Order.UpdateOrderRequestData) {
-  return request({
-    url: "table",
+export function updateDataApi(data: Order.UpdateReqData) {
+  return requestJson({
+    url: `OrderInfos/${data.orderId}`,
     method: "put",
     data
   })
 }
 
 /** 查 */
-export function getOrderDataApi(params: Order.GetOrderRequestData) {
-  // Order.GetOrderResponseData ???
-  return request<Order.GetOrderResponseData>({
-    url: "table",
-    method: "get",
-    params
+export function getDataApi() {
+  return requestJson<Order.ReadResData>({
+    url: "OrderInfos",
+    method: "get"
   })
 }

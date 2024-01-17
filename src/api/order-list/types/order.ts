@@ -1,47 +1,40 @@
-// interface option {
-//   optionName: string
-//   optionPrice: number
-// }
+export interface OrderSelect {
+  id: number
+  selectName: string
+  showOptionList: string[]
+  activeOptionList: string[]
+  min: number
+  max: number
+}
 
-// interface requestMeal {
-//   mealName: string
-//   quantity: number
-//   price: number
-//   OptionList?: string[]
-//   note: string
-// }
-
-interface responseMeal {
+export interface OrderMeal {
+  id: number | ""
   mealName: string
-  quantity: number
   price: number
-  activeOptionList?: string[]
+  count: string
+  selectList: OrderSelect[]
   note: string
 }
 
-// export interface CreateOrderRequestData {
-//   mealList: Meal[]
-// }
-
-export interface GetOrderRequestData {
-  /** 当前页码 */
-  // currentPage: number
-  /** 查询条数 */
-  // size: number
-
-  /** 查询参数：訂單編號 */
-  id?: string
-}
-
-export interface GetOrderData {
-  id: string
+export interface UpdateReqData {
+  orderId: string
   storeName: string
-  mealList: responseMeal[]
-  totalPrice: number
-  createTime: string
+  tableNumber: string
+  mealList: OrderMeal[]
+  total: number
+  payMethod: string
 }
 
-export type GetOrderResponseData = ApiResponseData<{
-  list: GetOrderData[]
+export interface ReadData {
+  orderId: string
+  storeName: string
+  tableNumber: string
+  mealList: string
+  payMethod: string
   total: number
-}>
+  orderTime: string
+  payOrderId: string
+  payStatus: number
+  payTime: string
+}
+export type ReadResData = ReadData[]

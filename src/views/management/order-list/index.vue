@@ -1,17 +1,18 @@
 <script lang="ts" setup>
-import { reactive, ref, computed, watch } from "vue"
+import { ref, reactive, computed, watch } from "vue"
+import { useRouter } from "vue-router"
+
+import { type OrderMeal, type ReadData } from "@/api/order-list/types/order"
+import * as Order from "@/api/order-list/"
 
 import { storeToRefs } from "pinia"
-
-// import { createTableDataApi, deleteTableDataApi, updateTableDataApi, getTableDataApi } from "@/api/table"
-import { type GetOrderData } from "@/api/order-list/types/order"
-
+import { useMealsStore } from "@/store/modules/meals"
+import { useTablesStore } from "@/store/modules/tables"
 import { useOrdersStore } from "@/store/modules/orders"
 
 import { type FormInstance, type TableInstance, ElMessage, ElMessageBox } from "element-plus"
-// import { type FormInstance, type FormRules, type TableInstance, ElMessage, ElMessageBox } from "element-plus"
-import { Refresh, Delete, RefreshRight } from "@element-plus/icons-vue"
-// import { Search, Refresh, CirclePlus, Delete, Download, RefreshRight } from "@element-plus/icons-vue"
+// import { Refresh, Delete, RefreshRight } from "@element-plus/icons-vue"
+import { Refresh, RefreshRight } from "@element-plus/icons-vue"
 
 import { usePagination } from "@/hooks/usePagination"
 import { useNumberFormat } from "@/hooks/useNumberFormat"
@@ -20,6 +21,11 @@ defineOptions({
   // 命名当前组件
   name: "OrderList"
 })
+
+const { paginationData, handleCurrentChange, handleSizeChange } = usePagination()
+const { thousandsSeparatorFormat } = useNumberFormat()
+
+const router = useRouter()
 
 // #region 日期
 // 快捷鍵
@@ -87,88 +93,259 @@ const resetDateSearch = () => {
 }
 // #endregion
 
-const loading = ref<boolean>(false)
-const { paginationData, handleCurrentChange, handleSizeChange } = usePagination()
-
-const { thousandsSeparatorFormat } = useNumberFormat()
+//#region table
+const tableRef = ref<TableInstance | null>(null)
+//#endregion
 
 //#region 删
-const handleDelete = (row: GetOrderData) => {
-  ElMessageBox.confirm(`正在刪除訂單:${row.id}，確認刪除？`, "提示", {
+const handleDelete = (row?: ReadData) => {
+  let text = ""
+  let ids: string[]
+  if (row) {
+    text = `正在刪除訂單:${row.orderId}，確認刪除？`
+    ids = [row.orderId]
+  } else {
+    text = `正在批量刪除訂單，確認刪除？`
+    const selections = tableRef.value?.getSelectionRows()
+    if (!selections.length) return
+    ids = selections.map((item: ReadData) => item.orderId)
+  }
+
+  ElMessageBox.confirm(text, "提示", {
     confirmButtonText: "確定",
     cancelButtonText: "取消",
     type: "warning"
   }).then(() => {
-    orderListData.value = orderListData.value.filter((item) => item.id !== row.id)
-    ElMessage.success("删除成功")
-    getOrderData()
+    Order.deleteDataApi(ids).then(() => {
+      ElMessage.success("删除成功")
+      getOrderData()
+    })
+  })
+}
+//#endregion
+
+//#region 改
+const dialogVisible = ref(false)
+const tableData = ref<OrderMeal[]>([])
+const currentUpdateId = ref<string>()
+const avtiveOrder = computed(() => {
+  return orderListData.value.find((item) => item.orderId === currentUpdateId.value)
+})
+
+const dialogActiveStore = ref<string>()
+const dialogActiveTable = ref<string>()
+watch(dialogActiveStore, () => {
+  dialogActiveTable.value = ""
+})
+
+const openDialog = (row: ReadData) => {
+  currentUpdateId.value = row.orderId
+  dialogActiveStore.value = row.storeName
+  setTimeout(() => {
+    dialogActiveTable.value = row.tableNumber
+  }, 0)
+  tableData.value = JSON.parse(JSON.stringify(row.mealList))
+  dialogVisible.value = true
+}
+
+const addTableData = () => {
+  tableData.value.push({
+    id: "",
+    mealName: "",
+    price: 0,
+    count: "",
+    selectList: [],
+    note: ""
   })
 }
 
-const tableRef = ref<TableInstance | null>(null)
-const batchDelete = () => {
-  const selections = tableRef.value?.getSelectionRows()
-  if (!selections.length) return
+const selectMeal = (index: number) => {
+  const meal = mealListData.value.find((item) => item.id === tableData.value[index].id)
+  if (!meal) return
+  tableData.value[index].mealName = meal.mealName
+  tableData.value[index].price = meal.price
+  const selectList = meal.selectList.map((item) => {
+    return {
+      ...item,
+      activeOptionList: []
+    }
+  })
+  tableData.value[index].selectList = JSON.parse(JSON.stringify(selectList))
+  tableData.value[index].note = ""
+}
 
-  ElMessageBox.confirm(`正在批量刪除訂單，確認刪除？`, "提示", {
+const deleteTableData = (index: number) => {
+  tableData.value.splice(index, 1)
+}
+
+const selectValidList = computed(() => {
+  const mealList: boolean[][] = []
+  tableData.value.forEach((item, index: number) => {
+    const selectList: boolean[] = []
+    item.selectList.forEach((item2, index2: number) => {
+      const length = item2.activeOptionList.length
+      if (length <= item2.max && length >= item2.min) {
+        selectList[index2] = true
+      } else {
+        selectList[index2] = false
+      }
+    })
+    mealList[index] = selectList
+  })
+  return mealList
+})
+const dialogValid = computed(() => {
+  let isValid = true
+  selectValidList.value.forEach((item) => {
+    item.forEach((item2) => {
+      if (!item2) isValid = false
+    })
+  })
+  if (!dialogActiveStore.value || !dialogActiveTable.value) {
+    isValid = false
+  }
+  return isValid
+})
+const handleUpdate = () => {
+  tableData.value = tableData.value.filter((item) => item.id)
+  if (!dialogValid.value || !dialogActiveStore.value || !dialogActiveTable.value) return
+
+  const resOrder = orderListData.value.find((item) => item.orderId === currentUpdateId.value)
+  if (!resOrder) return
+
+  const total = tableData.value.reduce((accumulator: number, current) => accumulator + current.price * current.count, 0)
+  const reqOrder = {
+    orderId: resOrder.orderId,
+    storeName: dialogActiveStore.value,
+    tableNumber: dialogActiveTable.value,
+    total,
+    payMethod: String(resOrder.payMethod),
+    mealList: tableData.value
+  }
+  ElMessageBox.confirm(`正在修改訂單:${reqOrder.orderId}，確認修改？`, "提示", {
+    confirmButtonText: "確定",
+    cancelButtonText: "取消",
+    type: "warning"
+  })
+    .then(() => {
+      Order.updateDataApi(reqOrder).then(() => {
+        ElMessage.success("修改成功")
+        if (dialogActiveStore.value !== resOrder.storeName || dialogActiveTable.value !== resOrder.tableNumber) {
+          const id = tableListData.value.find(
+            (item) => item.storeName === dialogActiveStore.value && item.number === dialogActiveTable.value
+          )?.id
+          router.push({ path: `/customer/${id}` })
+        }
+        getOrderData()
+      })
+    })
+    .finally(() => {
+      dialogVisible.value = false
+    })
+}
+//#endregion
+
+//#region  確認付款 / 取消
+const payMethodArr = [
+  {
+    label: "現金支付"
+  },
+  {
+    label: "LINEPAY"
+  },
+  {
+    label: "街口支付"
+  }
+]
+const payStatusArr = [
+  {
+    label: "尚未付款"
+  },
+  {
+    label: "已付款"
+  },
+  {
+    label: "取消"
+  }
+]
+
+const handleConfirmPay = (row: ReadData) => {
+  if (!row) return
+  ElMessageBox.confirm(`正在修改訂單:${row.orderId}的狀態為已付款，確認修改？`, "提示", {
     confirmButtonText: "確定",
     cancelButtonText: "取消",
     type: "warning"
   }).then(() => {
-    selections.forEach((element: GetOrderData) => {
-      const index = orderListData.value.findIndex((item) => item.id === element.id)
-      index > -1 ? orderListData.value.splice(index, 1) : null
+    Order.confirmPayApi(row.orderId).then(() => {
+      ElMessage.success("修改成功")
+      getOrderData()
     })
-    ElMessage.success("删除成功")
-    getOrderData()
+  })
+}
+const handleCancel = (row: ReadData) => {
+  if (!row) return
+  ElMessageBox.confirm(`正在取消訂單:${row.orderId}，確認取消？`, "提示", {
+    confirmButtonText: "確定",
+    cancelButtonText: "取消",
+    type: "warning"
+  }).then(() => {
+    Order.cancelDataApi(row.orderId).then(() => {
+      ElMessage.success("取消成功")
+      getOrderData()
+    })
   })
 }
 //#endregion
 
 //#region 查
-const { orderListData } = storeToRefs(useOrdersStore())
+const { mealListData } = storeToRefs(useMealsStore())
+const { getMealData } = useMealsStore()
+getMealData()
+
+const { tableListData } = storeToRefs(useTablesStore())
+const { getTableData } = useTablesStore()
+getTableData()
+
+const { loading, orderListData } = storeToRefs(useOrdersStore())
 const { getOrderData } = useOrdersStore()
-
 getOrderData()
+//#endregion
 
-const searchFormRef = ref<FormInstance | null>(null)
+//#region 過濾
+const searchFormRef = ref<FormInstance>()
 const searchData = reactive({
-  id: ""
+  orderId: ""
 })
-
-const handleSearch = () => {
-  paginationData.currentPage === 1 ? getOrderData() : (paginationData.currentPage = 1)
-}
 const resetSearch = () => {
-  searchFormRef.value?.resetFields()
-  handleSearch()
+  searchData.orderId = ""
 }
 
 const storeList = reactive(["全部", "復北店", "學府店"])
 const activeStore = ref("全部")
 
-const filterOrderListData = computed<GetOrderData[]>(() => {
-  const startTime = activeDateRange.value[0]
-  const endTime = activeDateRange.value[1]
-  let orderList: GetOrderData[] = JSON.parse(JSON.stringify(orderListData.value))
+const filterListData = computed<ReadData[]>(() => {
+  const [startTime, endTime] = activeDateRange.value
+  let orderList: ReadData[] = JSON.parse(JSON.stringify(orderListData.value))
   if (startTime && endTime) {
-    orderList = orderList.filter((order: GetOrderData) => {
-      const createTime = new Date(order.createTime)
+    orderList = orderList.filter((order: ReadData) => {
+      const createTime = new Date(order.orderTime)
       return createTime >= startTime && createTime <= endTime
     })
   }
-  return orderList.filter((item) => item.id.indexOf(searchData.id) > -1)
+  return orderList
+    .filter((item) => item.orderId.indexOf(searchData.orderId) > -1)
+    .filter((item) => activeStore.value === "全部" || item.storeName === activeStore.value)
 })
 watch(
-  filterOrderListData,
+  filterListData,
   () => {
-    paginationData.total = filterOrderListData.value.length
+    paginationData.total = filterListData.value.length
     paginationData.currentPage = 1
   },
   { immediate: true }
 )
 
-// startIndex, endIndex => pagefilterOrderListData
+// startIndex, endIndex => pagefilterListData
 const startIndex = ref(0)
 const endIndex = ref(0)
 watch(
@@ -181,8 +358,8 @@ watch(
   },
   { immediate: true }
 )
-const pagefilterOrderListData = computed<GetOrderData[]>(() => {
-  return filterOrderListData.value.filter((order, index) => index >= startIndex.value && index <= endIndex.value)
+const pagefilterListData = computed<ReadData[]>(() => {
+  return filterListData.value.filter((item, index) => index >= startIndex.value && index <= endIndex.value)
 })
 //#endregion
 </script>
@@ -210,7 +387,7 @@ const pagefilterOrderListData = computed<GetOrderData[]>(() => {
     <el-card v-loading="loading" shadow="never" class="search-wrapper">
       <el-form ref="searchFormRef" :inline="true" :model="searchData">
         <el-form-item prop="id" label="訂單編號">
-          <el-input v-model="searchData.id" placeholder="請輸入訂單編號" />
+          <el-input v-model="searchData.orderId" placeholder="請輸入訂單編號" />
         </el-form-item>
         <el-form-item>
           <el-button :icon="Refresh" @click="resetSearch">重置</el-button>
@@ -221,7 +398,7 @@ const pagefilterOrderListData = computed<GetOrderData[]>(() => {
     <el-card v-loading="loading" shadow="never">
       <div class="toolbar-wrapper">
         <div>
-          <el-button type="danger" :icon="Delete" @click="batchDelete()">批量刪除</el-button>
+          <!-- <el-button type="danger" :icon="Delete" @click="handleDelete()">批量刪除</el-button> -->
         </div>
         <div>
           <!-- <el-tooltip content="下载">
@@ -248,9 +425,9 @@ const pagefilterOrderListData = computed<GetOrderData[]>(() => {
       </div>
       <div class="table-wrapper">
         <!-- 必須加 row-key hover sortable 才不會有bug -->
-        <el-table ref="tableRef" :data="pagefilterOrderListData" row-key="id">
+        <el-table ref="tableRef" :data="pagefilterListData" row-key="orderId">
           <el-table-column type="selection" width="50" align="center" />
-          <el-table-column prop="id" label="訂單編號" width="200" align="center" />
+          <el-table-column prop="orderId" label="訂單編號" width="120" align="center" />
           <el-table-column label="餐點" align="left">
             <template #default="scope">
               <el-table :data="scope.row.mealList" size="small">
@@ -258,12 +435,12 @@ const pagefilterOrderListData = computed<GetOrderData[]>(() => {
                 <el-table-column label="價錢" width="80" align="center">
                   <template #default="scope2"> {{ thousandsSeparatorFormat(scope2.row.price) }} </template>
                 </el-table-column>
-                <el-table-column prop="quantity" label="數量" width="80" align="center" />
+                <el-table-column prop="count" label="數量" width="80" align="center" />
                 <el-table-column label="選擇" class="selectList">
                   <template #default="scope2">
-                    <!-- {{ scope2.row.activeOptionList?.join("，") }} -->
-
-                    <div v-for="(item, index) in scope2.row.activeOptionList" :key="index">- {{ item }}</div>
+                    <template v-for="item in scope2.row.selectList" :key="item.id">
+                      <div v-for="item2 in item.activeOptionList" :key="item2">- {{ item2 }}</div>
+                    </template>
                   </template>
                 </el-table-column>
                 <el-table-column prop="note" label="備註" />
@@ -271,12 +448,67 @@ const pagefilterOrderListData = computed<GetOrderData[]>(() => {
             </template>
           </el-table-column>
           <el-table-column label="合計" width="100" align="center">
-            <template #default="scope"> {{ thousandsSeparatorFormat(scope.row.totalPrice) }} </template>
+            <template #default="scope"> {{ thousandsSeparatorFormat(scope.row.total) }} </template>
           </el-table-column>
-          <el-table-column prop="createTime" label="成立時間" width="180" align="center" />
-          <el-table-column fixed="right" label="操作" width="80" align="center">
+          <el-table-column label="分店 / 桌號" width="100" align="center">
             <template #default="scope">
-              <el-button type="danger" text bg size="small" @click="handleDelete(scope.row)">删除</el-button>
+              <div>{{ scope.row.storeName }}</div>
+              <div>{{ scope.row.tableNumber }}</div>
+            </template>
+          </el-table-column>
+          <el-table-column label="付款方式 / 付款狀態" width="100" align="center">
+            <template #default="scope">
+              <div>{{ payMethodArr[scope.row.payMethod].label }}</div>
+              <div>
+                <el-tag
+                  :type="scope.row.payStatus === 0 ? 'danger' : scope.row.payStatus === 1 ? 'success' : 'info'"
+                  effect="plain"
+                  >{{ payStatusArr[scope.row.payStatus].label }}</el-tag
+                >
+              </div>
+            </template>
+          </el-table-column>
+          <el-table-column prop="orderTime" label="成立時間" width="100" align="center" />
+          <el-table-column fixed="right" label="操作" width="100" align="center">
+            <template #default="scope">
+              <el-button
+                v-if="scope.row.payStatus === 0"
+                class="mb-1"
+                type="warning"
+                text
+                bg
+                size="small"
+                @click="openDialog(scope.row)"
+                >修改訂單</el-button
+              >
+              <el-button
+                v-if="scope.row.payMethod === 0 && scope.row.payStatus === 0"
+                class="mb-1"
+                type="primary"
+                text
+                bg
+                size="small"
+                @click="handleConfirmPay(scope.row)"
+                >確認付款</el-button
+              >
+              <el-button
+                v-if="scope.row.payStatus === 0"
+                type="info"
+                text
+                bg
+                size="small"
+                @click="handleCancel(scope.row)"
+                >取消</el-button
+              >
+              <el-button
+                v-if="scope.row.payStatus === 1 || scope.row.payStatus === 2"
+                type="danger"
+                text
+                bg
+                size="small"
+                @click="handleDelete(scope.row)"
+                >刪除</el-button
+              >
             </template>
           </el-table-column>
         </el-table>
@@ -294,6 +526,84 @@ const pagefilterOrderListData = computed<GetOrderData[]>(() => {
         />
       </div>
     </el-card>
+
+    <!-- 修改訂單 -->
+    <el-dialog v-model="dialogVisible" title="修改訂單" width="70%">
+      <div class="toolbar-wrapper">
+        <div>
+          <el-select v-model="dialogActiveStore" placeholder="請選擇分店" style="width: 50%">
+            <el-option v-for="item in storeList" :key="item" v-show="item !== '全部'" :label="item" :value="item" />
+          </el-select>
+          <el-select v-model="dialogActiveTable" placeholder="請選擇桌號" style="width: 50%">
+            <el-option
+              v-for="item in tableListData"
+              :key="item.id"
+              v-show="
+                item.storeName === dialogActiveStore &&
+                (item.enable === 0 ||
+                  (item.storeName === avtiveOrder?.storeName && item.number === avtiveOrder.tableNumber))
+              "
+              :label="item.number"
+              :value="item.number"
+            />
+          </el-select>
+          <div class="selectValid" :class="{ false: !dialogActiveStore || !dialogActiveTable }">請選擇桌號</div>
+        </div>
+        <div />
+      </div>
+      <div class="toolbar-wrapper">
+        <div />
+        <div>
+          <el-button class="mb-1" type="primary" text bg @click="addTableData()">新增餐點</el-button>
+        </div>
+      </div>
+
+      <!-- 必須加 row-key hover sortable 才不會有bug -->
+      <el-table :data="tableData" size="small">
+        <el-table-column label="餐點名稱" width="150" align="center">
+          <template #default="scope2">
+            <el-select v-model="scope2.row.id" placeholder="餐點名稱" @change="selectMeal(scope2.$index)">
+              <el-option v-for="item in mealListData" :key="item.id" :label="item.mealName" :value="item.id" />
+            </el-select>
+          </template>
+        </el-table-column>
+        <el-table-column label="價錢" width="80" align="center">
+          <template #default="scope2"> {{ thousandsSeparatorFormat(scope2.row.price) }} </template>
+        </el-table-column>
+        <el-table-column prop="count" label="數量" width="180" align="center">
+          <template #default="scope2">
+            <el-input-number v-model="scope2.row.count" :min="1" />
+          </template>
+        </el-table-column>
+        <el-table-column label="選擇" class="selectList">
+          <template #default="scope2">
+            <template v-for="(item, index) in scope2.row.selectList" :key="item.id">
+              <div class="selectName">{{ item.selectName }} (max: {{ item.max }}, min: {{ item.min }})</div>
+              <el-checkbox-group v-model="item.activeOptionList" :max="item.max">
+                <el-checkbox v-for="option in item.showOptionList" :key="option" :label="option" size="small" />
+              </el-checkbox-group>
+              <div class="selectValid" :class="{ false: !selectValidList[scope2.$index][index] }" type="danger">
+                最少選擇 {{ item.min }}，最多選擇 {{ item.max }}
+              </div>
+            </template>
+          </template>
+        </el-table-column>
+        <el-table-column width="120" label="備註">
+          <template #default="scope2"> <el-input v-model="scope2.row.note" type="textarea" /></template>
+        </el-table-column>
+        <el-table-column fixed="right" label="操作" width="80" align="center">
+          <template #default="scope">
+            <el-button class="mb-1" type="danger" text bg size="small" @click="deleteTableData(scope.$index)"
+              >刪除</el-button
+            >
+          </template>
+        </el-table-column>
+      </el-table>
+      <template #footer>
+        <el-button @click="dialogVisible = false">取消</el-button>
+        <el-button type="primary" @click="handleUpdate()">確認</el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
@@ -305,6 +615,7 @@ const pagefilterOrderListData = computed<GetOrderData[]>(() => {
     margin-bottom: 0;
   }
 }
+
 .search-wrapper {
   margin-bottom: 20px;
   :deep(.el-card__body) {
@@ -320,10 +631,29 @@ const pagefilterOrderListData = computed<GetOrderData[]>(() => {
 
 .table-wrapper {
   margin-bottom: 20px;
+
+  .el-button + .el-button {
+    margin-left: 0;
+  }
 }
 
 .pager-wrapper {
   display: flex;
   justify-content: flex-end;
+}
+
+.selectName {
+  padding: 0 5px;
+  background: #eee;
+  color: #555;
+}
+.selectValid {
+  padding: 0 5px;
+  color: #f56c6c;
+  opacity: 0;
+  transition: 0.3s;
+  &.false {
+    opacity: 1;
+  }
 }
 </style>
