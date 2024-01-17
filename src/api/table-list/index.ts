@@ -30,7 +30,7 @@ export function updateDataApi(data: Table.UpdateReqData) {
 
 export function enableApi(tableId: number) {
   return requestGenerate({
-    url: `GenetateOrder/${tableId}`,
+    url: `/GenerateOrder/${tableId}`,
     method: "get"
   })
 }

@@ -48,7 +48,7 @@ export default (configEnv: ConfigEnv): UserConfigExport => {
           /** 是否允许跨域 */
           changeOrigin: true
         },
-        "/GenetateOrder": {
+        "/GenerateOrder": {
           target: "http://192.168.6.239",
           ws: true,
           /** 是否允许跨域 */
