@@ -46,7 +46,7 @@ export const useOrdersStore = defineStore("orders", () => {
           }
           item.orderTime = `${orderTimeObj.year}-${orderTimeObj.month}-${orderTimeObj.date} ${orderTimeObj.hour}:${orderTimeObj.minute}:${orderTimeObj.second}`
         })
-        orderListData.value = res
+        orderListData.value = res.reverse()
       })
       .catch(() => {
         orderListData.value = []

@@ -1,6 +1,6 @@
 <script lang="ts" setup>
 import { ref, reactive, computed, watch } from "vue"
-import { useRouter } from "vue-router"
+// import { useRouter } from "vue-router"
 
 import { type OrderMeal, type ReadData } from "@/api/order-list/types/order"
 import * as Order from "@/api/order-list/"
@@ -25,7 +25,7 @@ defineOptions({
 const { paginationData, handleCurrentChange, handleSizeChange } = usePagination()
 const { thousandsSeparatorFormat } = useNumberFormat()
 
-const router = useRouter()
+// const router = useRouter()
 
 // #region 日期
 // 快捷鍵
@@ -213,7 +213,10 @@ const handleUpdate = () => {
   const resOrder = orderListData.value.find((item) => item.orderId === currentUpdateId.value)
   if (!resOrder) return
 
-  const total = tableData.value.reduce((accumulator: number, current) => accumulator + current.price * current.count, 0)
+  const total = tableData.value.reduce(
+    (accumulator: number, current) => accumulator + current.price * Number(current.count),
+    0
+  )
   const reqOrder = {
     orderId: resOrder.orderId,
     storeName: dialogActiveStore.value,
@@ -230,12 +233,12 @@ const handleUpdate = () => {
     .then(() => {
       Order.updateDataApi(reqOrder).then(() => {
         ElMessage.success("修改成功")
-        if (dialogActiveStore.value !== resOrder.storeName || dialogActiveTable.value !== resOrder.tableNumber) {
-          const id = tableListData.value.find(
-            (item) => item.storeName === dialogActiveStore.value && item.number === dialogActiveTable.value
-          )?.id
-          router.push({ path: `/customer/${id}` })
-        }
+        // if (dialogActiveStore.value !== resOrder.storeName || dialogActiveTable.value !== resOrder.tableNumber) {
+        //   const id = tableListData.value.find(
+        //     (item) => item.storeName === dialogActiveStore.value && item.number === dialogActiveTable.value
+        //   )?.id
+        //   router.push({ path: `/customer/${id}` })
+        // }
         getOrderData()
       })
     })
