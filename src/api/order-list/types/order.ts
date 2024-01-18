@@ -29,7 +29,7 @@ export interface ReadData {
   orderId: string
   storeName: string
   tableNumber: string
-  mealList: string
+  mealList: OrderMeal[]
   payMethod: string
   total: number
   orderTime: string

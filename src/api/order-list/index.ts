@@ -37,7 +37,7 @@ export function updateDataApi(data: Order.UpdateReqData) {
 
 /** 查 */
 export function getDataApi() {
-  return requestJson<Order.ReadResData>({
+  return requestJson<any>({
     url: "OrderInfos",
     method: "get"
   })

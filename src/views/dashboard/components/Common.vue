@@ -3,8 +3,8 @@ import { ref, computed, provide } from "vue"
 
 import { storeToRefs } from "pinia"
 
-import { type GetOrderData } from "@/api/order-list/types/order"
-import { type GetMealData } from "@/api/meal-list/types/meal"
+import { type ReadData as OrderReadData, type OrderMeal } from "@/api/order-list/types/order"
+import { type ReadData as MealReadData } from "@/api/meal-list/types/meal"
 
 import { useOrdersStore } from "@/store/modules/orders"
 import { useMealsStore } from "@/store/modules/meals"
@@ -103,6 +103,7 @@ const resetSearch = () => {
 }
 // #endregion
 
+// #region 查
 const { orderListData } = storeToRefs(useOrdersStore())
 const { getOrderData } = useOrdersStore()
 getOrderData()
@@ -110,42 +111,53 @@ getOrderData()
 const { mealListData } = storeToRefs(useMealsStore())
 const { getMealData } = useMealsStore()
 getMealData()
+// #endregion
 
+// #region 過濾
 const mealSalesList = computed(() => {
-  let orderList: GetOrderData[] = JSON.parse(JSON.stringify(orderListData.value))
-  const originMealList: GetMealData[] = JSON.parse(JSON.stringify(mealListData.value))
-  type NewGetMealData = GetMealData & { salesVolume: number }
-  let mealList: NewGetMealData[] = []
+  let orderList: OrderReadData[] = JSON.parse(JSON.stringify(orderListData.value))
+  const originMealList: MealReadData[] = JSON.parse(JSON.stringify(mealListData.value))
+  type NewMealReadData = MealReadData & { salesVolume: number }
+  let mealList: NewMealReadData[] = []
 
   const startTime = activeDateRange.value[0]
   const endTime = activeDateRange.value[1]
   if (startTime && endTime) {
-    orderList = orderList.filter((order: GetOrderData) => {
-      const createTime = new Date(order.createTime)
+    orderList = orderList.filter((order: OrderReadData) => {
+      const createTime = new Date(order.orderTime)
       return createTime >= startTime && createTime <= endTime
     })
   }
-
   orderList.forEach((order) => {
-    order.mealList.forEach((orderMeal) => {
-      const index = originMealList.findIndex((meal) => meal.mealName === orderMeal.mealName)
+    order.mealList.forEach((orderMeal: OrderMeal) => {
+      const index = originMealList.findIndex((meal) => meal.id === orderMeal.id)
       if (index > -1) {
         if (mealList[index]) {
-          mealList[index].salesVolume += orderMeal.quantity
+          mealList[index].salesVolume += Number(orderMeal.count)
         } else {
           mealList[index] = JSON.parse(JSON.stringify(originMealList[index]))
-          mealList[index].salesVolume = orderMeal.quantity
+          mealList[index].salesVolume = Number(orderMeal.count)
         }
       }
     })
   })
-  mealList = mealList.filter((meal: NewGetMealData) => meal.salesVolume)
-  mealList.sort((a: NewGetMealData, b: NewGetMealData) => b.salesVolume - a.salesVolume)
-
+  mealList = mealList.filter((meal: NewMealReadData) => meal.salesVolume)
+  mealList.sort((a: NewMealReadData, b: NewMealReadData) => b.salesVolume - a.salesVolume)
   return mealList
 })
+// #endregion
 
 // #region echart option
+const salesVolumeRank = computed(() => {
+  const array: number[] = []
+  mealSalesList.value.forEach((item) => {
+    if (array.indexOf(item.salesVolume) < 0) {
+      array.push(item.salesVolume)
+    }
+  })
+  return array
+})
+
 const optionNameList = computed(() => mealSalesList.value.map((meal) => meal.mealName))
 const optionMealList = computed(() => {
   return mealSalesList.value.map((meal) => {
@@ -306,11 +318,13 @@ const pieOption = ref({
     <el-card class="sales-wrapper">
       <div style="text-align: center" v-if="mealSalesList.length < 1">暫無數據</div>
       <swiper :modules="modules" navigation :slides-per-view="5" :space-between="10">
-        <swiper-slide v-for="(meal, index) in mealSalesList" :key="meal.mealName">
+        <swiper-slide v-for="meal in mealSalesList" :key="meal.id">
           <el-card :body-style="{ padding: 0 }">
             <div class="mealImg" :style="{ 'background-image': `url(/img/meals/${meal.mealName}.jpg)` }">
               <div class="mealText" style="padding: 10px">
-                <div class="rank" v-if="index < 3">{{ index + 1 }}</div>
+                <div class="rank" v-if="salesVolumeRank.indexOf(meal.salesVolume) > -1">
+                  {{ salesVolumeRank.indexOf(meal.salesVolume) + 1 }}
+                </div>
                 <div class="mealName">{{ meal.mealName }}</div>
                 <div class="mealSales">銷量: {{ meal.salesVolume }}</div>
               </div>

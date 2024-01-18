@@ -2,8 +2,8 @@ import { ref } from "vue"
 import store from "@/store"
 import { defineStore } from "pinia"
 
-import { type OrderSelect, type OrderMeal, type ReadData } from "@/api/order-list/types/order"
 import * as Order from "@/api/order-list/"
+import { type ReadData } from "@/api/order-list/types/order"
 
 export const useOrdersStore = defineStore("orders", () => {
   const loading = ref<boolean>(false)
@@ -12,14 +12,14 @@ export const useOrdersStore = defineStore("orders", () => {
   const getOrderData = () => {
     Order.getDataApi()
       .then((res) => {
-        res.forEach((item) => {
-          item.mealList = JSON.parse(item.mealList).map((item2: OrderMeal) => {
+        res.forEach((item: any) => {
+          item.mealList = JSON.parse(item.mealList).map((item2: any) => {
             return {
               id: item2.Id,
               mealName: item2.MealName,
               price: item2.Price,
               count: item2.Count,
-              selectList: item2.SelectList.map((item3: OrderSelect) => {
+              selectList: item2.SelectList.map((item3: any) => {
                 return {
                   id: item3.Id,
                   selectName: item3.SelectName,
