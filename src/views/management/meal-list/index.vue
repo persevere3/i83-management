@@ -89,25 +89,13 @@ const isFormdataReset = reactive<{ [propName: string]: boolean }>({
 //#region image
 // show
 const image = ref<any>("")
-const demoImage = computed(() => {
-  if (image.value) {
-    if (image.value.indexOf("base64") > -1) return image.value
-    else return "http://192.168.6.239" + image.value
-  } else return ""
-})
 
 // formData.file => image.value
 const reader = new FileReader()
 reader.addEventListener("load", () => {
   image.value = reader.result
 })
-watch(
-  () => formData.file,
-  () => {
-    if (formData.file) reader.readAsDataURL(formData.file)
-    else image.value = ""
-  }
-)
+
 const inputHandler = (event: any) => {
   const img = event.target.files[0]
   if (!img) return
@@ -115,16 +103,20 @@ const inputHandler = (event: any) => {
     ElMessage.error("格式錯誤!")
     return
   }
-  formData.file = event.target.files[0]
+  formData.file = img
+  reader.readAsDataURL(formData.file)
   event.target.value = ""
 }
 const deleteImg = () => {
   formData.file = ""
+  image.value = ""
 }
 //#endregion
 
 const batchMeals = ref<MealReadData[]>([])
 const openDialog = (row?: MealReadData, batchUpdate?: boolean) => {
+  formRef.value?.resetFields()
+
   if (batchUpdate) {
     const selections = tableRef.value?.getSelectionRows()
     if (!selections.length) return
@@ -140,11 +132,9 @@ const openDialog = (row?: MealReadData, batchUpdate?: boolean) => {
     formData.categorys = JSON.parse(JSON.stringify(row.category.map((item) => item.id)))
     formData.mealName = row.mealName
 
-    formData.file = ""
-    formRules.file[0].required = false
-    setTimeout(() => {
-      image.value = row.image
-    }, 0)
+    formRules.file[0].required = true
+    if (row.image) formData.file = "1"
+    image.value = row.image
 
     formData.origin = row.origin
     formData.mealTextList = JSON.parse(JSON.stringify(row.mealTextList))
@@ -157,7 +147,6 @@ const openDialog = (row?: MealReadData, batchUpdate?: boolean) => {
     formData.enable = row.enable
   } else {
     // 新增餐點 or 批量修改餐點
-    formRef.value?.resetFields()
     currentUpdateId.value = undefined
     for (const key in isFormdataReset) isFormdataReset[key] = false
 
@@ -167,8 +156,8 @@ const openDialog = (row?: MealReadData, batchUpdate?: boolean) => {
 
     formData.mealName = ""
 
-    formData.file = ""
     formRules.file[0].required = true
+    deleteImg()
 
     formData.origin = ""
     formData.mealTextList = []
@@ -293,7 +282,13 @@ const handleDelete = (row?: MealReadData) => {
 const handleUpdate = () => {
   const updateFormData = JSON.parse(JSON.stringify(formData))
   updateFormData.id = currentUpdateId.value
-  updateFormData.image = image.value
+  // 有傳 formData.file: (binary) 後端覆蓋原本是傳base64的image
+  // 沒傳 formData.file: 1, 後端維持原本的image
+  if (process.env.NODE_ENV === "development") {
+    updateFormData.image = image.value.replace("http://192.168.6.239", "")
+  } else {
+    updateFormData.image = image.value
+  }
   delete updateFormData.categorys
   delete updateFormData.file
 
@@ -316,7 +311,9 @@ const handleBatchUpdate = () => {
   const newBatchMeal = JSON.parse(JSON.stringify(batchMeals.value))
   newBatchMeal.forEach((item: any) => {
     delete item.category
-    // item.image = isFormdataReset.image ? "" : item.image
+    if (process.env.NODE_ENV === "development") {
+      item.image = item.image.replace("http://192.168.6.239", "")
+    }
     item.mealTextList = isFormdataReset.mealTextList
       ? []
       : formData.mealTextList?.length
@@ -337,8 +334,7 @@ const handleBatchUpdate = () => {
     objToFormData({
       categorys: isFormdataReset.categorys ? [] : formData.categorys?.length ? formData.categorys : "noChange",
       products: newBatchMeal,
-      // file: isFormdataReset.image ? null : formData.file
-      file: formData.file
+      file: ""
     })
   )
     .then(() => {
@@ -473,7 +469,7 @@ const pagefilterListData = computed<MealReadData[]>(() => {
           <el-table-column label="餐點圖片" width="80" align="center">
             <template #default="scope">
               <div class="mealImgContainer">
-                <img class="mealImg" :src="`http://192.168.6.239${scope.row.image}`" alt="" srcset="" />
+                <img class="mealImg" :src="scope.row.image" alt="" srcset="" />
               </div>
             </template>
           </el-table-column>
@@ -573,7 +569,7 @@ const pagefilterListData = computed<MealReadData[]>(() => {
             <input :disabled="isFormdataReset.image" class="uploadImg" type="file" ref="file" accept="image/*" />
           </el-button>
           <template v-if="image">
-            <img :src="demoImage" />
+            <img :src="image" />
             <el-button
               type="danger"
               class="deleteImgBtn"

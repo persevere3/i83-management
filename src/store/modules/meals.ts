@@ -32,7 +32,13 @@ export const useMealsStore = defineStore("meals", () => {
     loading.value = true
     Meal.getDataApi()
       .then((res) => {
+        if (process.env.NODE_ENV === "development") {
+          res.forEach((item) => {
+            item.image = "http://192.168.6.239" + item.image
+          })
+        }
         mealListData.value = res
+
         const f = false
         if (f) initSort()
       })
