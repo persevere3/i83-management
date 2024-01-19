@@ -18,12 +18,12 @@ const loading = ref(false)
 const { id } = useRoute().params
 
 const tableListData = ref<ReadData[]>([])
-const activeTable = ref<ReadData>({})
+const activeTable = ref<ReadData>()
 loading.value = true
 Table.getDataApi()
   .then((res) => {
     tableListData.value = res
-    activeTable.value = tableListData.value.find((item) => item.id == id)
+    activeTable.value = tableListData.value.find((item) => item.id == Number(id))
     console.log(activeTable.value)
   })
   .catch(() => {
@@ -39,7 +39,7 @@ Table.getDataApi()
     <el-card v-loading="loading" shadow="never">
       <QRCodeVue3
         myclass="qrcode"
-        v-if="activeTable.number"
+        v-if="activeTable && activeTable.number"
         :value="`https://i83.vercel.app/?queryToken=${activeTable.orderToken}`"
         :dotsOptions="{ type: 'classy' }"
       />

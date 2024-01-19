@@ -3,19 +3,20 @@ import { ref, computed } from "vue"
 import { ElMessage } from "element-plus"
 import { Bell } from "@element-plus/icons-vue"
 import NotifyList from "./NotifyList.vue"
-import { type ListItem, notifyData, messageData, todoData } from "./data"
+// import { type ListItem, notifyData, messageData, todoData } from "./data"
+import { notifyData, messageData, todoData } from "./data"
 
 type TabName = "通知" | "消息" | "待办"
 
-interface DataItem {
-  name: TabName
-  type: "primary" | "success" | "warning" | "danger" | "info"
-  list: ListItem[]
-}
+// interface DataItem {
+//   name: TabName
+//   type: "primary" | "success" | "warning" | "danger" | "info"
+//   list: ListItem[]
+// }
 
 /** 角标当前值 */
 const badgeValue = computed(() => {
-  return data.value.reduce((sum, item) => sum + item.list.length, 0)
+  return data.value.reduce((sum: number, item: any) => sum + item.list.length, 0)
 })
 /** 角标最大值 */
 const badgeMax = 99
@@ -24,7 +25,7 @@ const popoverWidth = 350
 /** 当前 Tab */
 const activeName = ref<TabName>("通知")
 /** 所有数据 */
-const data = ref<DataItem[]>([
+const data = ref<any>([
   // 通知数据
   {
     name: "通知",
