@@ -6,6 +6,7 @@ import { storeToRefs } from "pinia"
 import { type ReadData as OrderReadData, type OrderMeal } from "@/api/order-list/types/order"
 import { type ReadData as MealReadData } from "@/api/meal-list/types/meal"
 
+import { useCommonStore } from "@/store/modules/common"
 import { useOrdersStore } from "@/store/modules/orders"
 import { useMealsStore } from "@/store/modules/meals"
 
@@ -96,7 +97,7 @@ const shortcuts = [
   }
 ]
 
-const activeDateRange = ref<Date[]>([])
+const activeDateRange = ref<any>([])
 
 const resetSearch = () => {
   activeDateRange.value = []
@@ -104,6 +105,8 @@ const resetSearch = () => {
 // #endregion
 
 // #region 查
+const { activeStore } = storeToRefs(useCommonStore())
+
 const { orderListData } = storeToRefs(useOrdersStore())
 const { getOrderData } = useOrdersStore()
 getOrderData()
@@ -119,6 +122,10 @@ const mealSalesList = computed(() => {
   const originMealList: MealReadData[] = JSON.parse(JSON.stringify(mealListData.value))
   type NewMealReadData = MealReadData & { salesVolume: number }
   let mealList: NewMealReadData[] = []
+
+  orderList = orderList.filter(
+    (order: OrderReadData) => activeStore.value === "全部分店" || order.storeName === activeStore.value
+  )
 
   const startTime = activeDateRange.value[0]
   const endTime = activeDateRange.value[1]
@@ -303,9 +310,10 @@ const pieOption = ref({
           <el-date-picker
             v-model="activeDateRange"
             type="daterange"
-            range-separator="To"
             start-placeholder="Start Date"
+            range-separator="To"
             end-placeholder="End Date"
+            :clearable="false"
             :shortcuts="shortcuts"
           />
         </el-form-item>

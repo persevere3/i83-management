@@ -5,6 +5,7 @@ import { type ReadData } from "@/api/table-list/types/table"
 import * as Table from "@/api/table-list"
 
 import { storeToRefs } from "pinia"
+import { useCommonStore } from "@/store/modules/common"
 import { useTablesStore } from "@/store/modules/tables"
 
 import { type FormInstance, type FormRules, type TableInstance, ElMessage, ElMessageBox } from "element-plus"
@@ -50,7 +51,7 @@ const openDialog = (row?: ReadData) => {
     currentUpdateId.value = undefined
     formData.storeName = ""
     formData.number = ""
-    if (activeStore.value !== "全部") formData.storeName = activeStore.value
+    if (activeStore.value !== "全部分店") formData.storeName = activeStore.value
   }
   dialogVisible.value = true
 }
@@ -159,7 +160,7 @@ const openStatusDialog = (isEnable: boolean) => {
   enable.value = isEnable
   statusFormData.storeName = ""
   statusFormData.id = ""
-  if (activeStore.value !== "全部") statusFormData.storeName = activeStore.value
+  if (activeStore.value !== "全部分店") statusFormData.storeName = activeStore.value
   statusDialogVisible.value = true
 }
 const handleStatusConfirm = () => {
@@ -234,6 +235,8 @@ const tableEnableArr = [
   }
 ]
 
+const { storeList, activeStore } = storeToRefs(useCommonStore())
+
 const { loading, tableListData } = storeToRefs(useTablesStore())
 const { getTableData } = useTablesStore()
 getTableData()
@@ -248,13 +251,11 @@ const resetSearch = () => {
   searchData.number = ""
 }
 
-const storeList = reactive(["全部", "復北店", "學府店"])
-const activeStore = ref("全部")
 const activeStatus = ref<boolean | null>(null)
 const filterListData = computed<ReadData[]>(() => {
   let list = tableListData.value
   // 分店
-  if (activeStore.value !== "全部") list = list.filter((item) => item.storeName === activeStore.value)
+  if (activeStore.value !== "全部分店") list = list.filter((item) => item.storeName === activeStore.value)
   // 桌號
   list = list.filter((item) => item.number.indexOf(searchData.number) > -1)
   // 開啟/關閉
@@ -319,36 +320,22 @@ const pagefilterListData = computed<ReadData[]>(() => {
       </div>
       <div class="toolbar-wrapper">
         <div>
-          <el-button
-            v-for="item in storeList"
-            :key="item"
-            :type="item === activeStore ? 'success' : 'info'"
-            @click="activeStore = item"
-          >
-            {{ item }}
-            (<template v-if="item === '全部'"> {{ tableListData.length }} </template>
-            <template v-else> {{ tableListData.filter((item2) => item2.storeName === item).length }} </template>)
-          </el-button>
-        </div>
-      </div>
-      <div class="toolbar-wrapper">
-        <div>
           <el-button :type="activeStatus === null ? 'success' : 'info'" @click="activeStatus = null">
             全部 ({{
-              tableListData.filter((item) => activeStore === "全部" || item.storeName === activeStore).length
+              tableListData.filter((item) => activeStore === "全部分店" || item.storeName === activeStore).length
             }})</el-button
           >
           <el-button :type="activeStatus === true ? 'success' : 'info'" @click="activeStatus = true">
             啟用 ({{
               tableListData
-                .filter((item) => activeStore === "全部" || item.storeName === activeStore)
+                .filter((item) => activeStore === "全部分店" || item.storeName === activeStore)
                 .filter((item) => item.enable).length
             }})
           </el-button>
           <el-button :type="activeStatus === false ? 'success' : 'info'" @click="activeStatus = false">
             未啟用 ({{
               tableListData
-                .filter((item) => activeStore === "全部" || item.storeName === activeStore)
+                .filter((item) => activeStore === "全部分店" || item.storeName === activeStore)
                 .filter((item) => !item.enable).length
             }})
           </el-button>
@@ -414,7 +401,7 @@ const pagefilterListData = computed<ReadData[]>(() => {
       <el-form ref="formRef" :model="formData" :rules="formRules" label-width="100px" label-position="left">
         <el-form-item prop="storeName" label="分店">
           <el-select v-model="formData.storeName" placeholder="請選擇分店" style="width: 100%">
-            <el-option v-for="item in storeList" :key="item" v-show="item !== '全部'" :label="item" :value="item" />
+            <el-option v-for="item in storeList" :key="item" v-show="item !== '全部分店'" :label="item" :value="item" />
           </el-select>
         </el-form-item>
         <el-form-item prop="number" label="桌號">
@@ -438,7 +425,7 @@ const pagefilterListData = computed<ReadData[]>(() => {
       >
         <el-form-item prop="storeName" label="分店">
           <el-select v-model="statusFormData.storeName" placeholder="請選擇分店" style="width: 100%">
-            <el-option v-for="item in storeList" :key="item" v-show="item !== '全部'" :label="item" :value="item" />
+            <el-option v-for="item in storeList" :key="item" v-show="item !== '全部分店'" :label="item" :value="item" />
           </el-select>
         </el-form-item>
         <el-form-item prop="number" label="桌號">

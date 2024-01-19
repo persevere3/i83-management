@@ -6,6 +6,7 @@ import { type OrderMeal, type ReadData } from "@/api/order-list/types/order"
 import * as Order from "@/api/order-list/"
 
 import { storeToRefs } from "pinia"
+import { useCommonStore } from "@/store/modules/common"
 import { useMealsStore } from "@/store/modules/meals"
 import { useTablesStore } from "@/store/modules/tables"
 import { useOrdersStore } from "@/store/modules/orders"
@@ -86,7 +87,7 @@ const shortcuts = [
   }
 ]
 
-const activeDateRange = ref<Date[]>([])
+const activeDateRange = ref<any>([])
 
 const resetDateSearch = () => {
   activeDateRange.value = []
@@ -301,6 +302,8 @@ const handleCancel = (row: ReadData) => {
 //#endregion
 
 //#region 查
+const { storeList, activeStore } = storeToRefs(useCommonStore())
+
 const { mealListData } = storeToRefs(useMealsStore())
 const { getMealData } = useMealsStore()
 getMealData()
@@ -323,9 +326,6 @@ const resetSearch = () => {
   searchData.orderId = ""
 }
 
-const storeList = reactive(["全部", "復北店", "學府店"])
-const activeStore = ref("全部")
-
 const filterListData = computed<ReadData[]>(() => {
   const [startTime, endTime] = activeDateRange.value
   let orderList: ReadData[] = JSON.parse(JSON.stringify(orderListData.value))
@@ -337,7 +337,7 @@ const filterListData = computed<ReadData[]>(() => {
   }
   return orderList
     .filter((item) => item.orderId.indexOf(searchData.orderId) > -1)
-    .filter((item) => activeStore.value === "全部" || item.storeName === activeStore.value)
+    .filter((item) => activeStore.value === "全部分店" || item.storeName === activeStore.value)
 })
 watch(
   filterListData,
@@ -410,20 +410,6 @@ const pagefilterListData = computed<ReadData[]>(() => {
           <el-tooltip content="刷新當前頁">
             <el-button type="primary" :icon="RefreshRight" circle @click="getOrderData" />
           </el-tooltip>
-        </div>
-      </div>
-      <div class="toolbar-wrapper">
-        <div>
-          <el-button
-            v-for="item in storeList"
-            :key="item"
-            :type="item === activeStore ? 'success' : 'info'"
-            @click="activeStore = item"
-          >
-            {{ item }}
-            (<template v-if="item === '全部'"> {{ orderListData.length }} </template>
-            <template v-else> {{ orderListData.filter((item2) => item2.storeName === item).length }} </template>)
-          </el-button>
         </div>
       </div>
       <div class="table-wrapper">
@@ -535,7 +521,7 @@ const pagefilterListData = computed<ReadData[]>(() => {
       <div class="toolbar-wrapper">
         <div>
           <el-select v-model="dialogActiveStore" placeholder="請選擇分店" style="width: 50%">
-            <el-option v-for="item in storeList" :key="item" v-show="item !== '全部'" :label="item" :value="item" />
+            <el-option v-for="item in storeList" :key="item" v-show="item !== '全部分店'" :label="item" :value="item" />
           </el-select>
           <el-select v-model="dialogActiveTable" placeholder="請選擇桌號" style="width: 50%">
             <el-option
