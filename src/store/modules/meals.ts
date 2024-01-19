@@ -36,6 +36,10 @@ export const useMealsStore = defineStore("meals", () => {
           res.forEach((item) => {
             item.image = "http://192.168.6.239" + item.image
           })
+        } else {
+          res.forEach((item) => {
+            item.image = "https://preview.uniqcarttest.com" + item.image
+          })
         }
         mealListData.value = res
 

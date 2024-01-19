@@ -287,7 +287,8 @@ const handleUpdate = () => {
   if (process.env.NODE_ENV === "development") {
     updateFormData.image = image.value.replace("http://192.168.6.239", "")
   } else {
-    updateFormData.image = image.value
+    updateFormData.image = image.value.replace("https://preview.uniqcarttest.com", "")
+    // updateFormData.image = image.value
   }
   delete updateFormData.categorys
   delete updateFormData.file
@@ -313,6 +314,8 @@ const handleBatchUpdate = () => {
     delete item.category
     if (process.env.NODE_ENV === "development") {
       item.image = item.image.replace("http://192.168.6.239", "")
+    } else {
+      item.image = item.image.replace("https://preview.uniqcarttest.com", "")
     }
     item.mealTextList = isFormdataReset.mealTextList
       ? []
