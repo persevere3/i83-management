@@ -123,6 +123,8 @@ const mealSalesList = computed(() => {
   type NewMealReadData = MealReadData & { salesVolume: number }
   let mealList: NewMealReadData[] = []
 
+  orderList = orderList.filter((order: OrderReadData) => order.payStatus === 1)
+
   orderList = orderList.filter(
     (order: OrderReadData) => activeStore.value === "全部分店" || order.storeName === activeStore.value
   )

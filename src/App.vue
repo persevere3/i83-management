@@ -3,7 +3,7 @@
 import { useTheme } from "@/hooks/useTheme"
 // import { ElNotification } from "element-plus"
 // 将 Element Plus 的语言设置为中文
-import zhCn from "element-plus/es/locale/lang/zh-cn"
+import zhTw from "element-plus/es/locale/lang/zh-tw"
 
 import { useRoute } from "vue-router"
 
@@ -28,7 +28,7 @@ initTheme()
 </script>
 
 <template>
-  <el-config-provider :locale="zhCn">
+  <el-config-provider :locale="zhTw">
     <router-view :key="route.path" />
   </el-config-provider>
 </template>
