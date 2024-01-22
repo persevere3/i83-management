@@ -183,9 +183,9 @@ onMounted(() => {
     </ScrollPane>
     <ul v-show="visible" class="contextmenu" :style="{ left: left + 'px', top: top + 'px' }">
       <li @click="refreshSelectedTag(selectedTag)">刷新</li>
-      <li v-if="!isAffix(selectedTag)" @click="closeSelectedTag(selectedTag)">关闭</li>
-      <li @click="closeOthersTags">关闭其它</li>
-      <li @click="closeAllTags(selectedTag)">关闭所有</li>
+      <li v-if="!isAffix(selectedTag)" @click="closeSelectedTag(selectedTag)">關閉</li>
+      <li @click="closeOthersTags">關閉其他</li>
+      <li @click="closeAllTags(selectedTag)">關閉所有</li>
     </ul>
   </div>
 </template>
