@@ -70,6 +70,17 @@ const handleConfirm = () => {
 
 //#region 增
 const handleCreate = () => {
+  const table = tableListData.value.find(
+    (item) => item.storeName === formData.storeName && item.number === formData.number
+  )
+  if (table) {
+    ElMessageBox.confirm("桌號不可重複", "提示", {
+      confirmButtonText: "確定",
+
+      type: "warning"
+    })
+    return
+  }
   Table.createDataApi({
     id: 0,
     storeName: formData.storeName,
