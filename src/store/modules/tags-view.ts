@@ -24,7 +24,8 @@ export const useTagsViewStore = defineStore("tags-view", () => {
     const index = visitedViews.value.findIndex((v) => v.path === view.path)
     if (index !== -1) {
       // 防止 query 参数丢失
-      visitedViews.value[index].fullPath !== view.fullPath && (visitedViews.value[index] = { ...view })
+      // visitedViews.value[index].fullPath !== view.fullPath && (visitedViews.value[index] = { ...view })
+      visitedViews.value[index] = { ...view }
     } else {
       // 添加新的 visitedView
       visitedViews.value.push({ ...view })

@@ -6,6 +6,9 @@ import * as Table from "@/api/table-list"
 
 import { useRoute } from "vue-router"
 
+import { storeToRefs } from "pinia"
+import { useTagsViewStore } from "@/store/modules/tags-view"
+
 import QRCodeVue3 from "qrcode-vue3"
 
 defineOptions({
@@ -14,8 +17,10 @@ defineOptions({
 })
 
 const loading = ref(false)
+const route = useRoute()
+const { id } = route.params
 
-const { id } = useRoute().params
+const { visitedViews } = storeToRefs(useTagsViewStore())
 
 const tableListData = ref<ReadData[]>([])
 const activeTable = ref<ReadData>()
@@ -24,7 +29,12 @@ Table.getDataApi()
   .then((res) => {
     tableListData.value = res
     activeTable.value = tableListData.value.find((item) => item.id == Number(id))
-    console.log(activeTable.value)
+    // tag
+    const currentPath = route.path
+    const view = visitedViews.value.find((item) => item.path === currentPath)
+    if (view && view.meta) {
+      view.meta.title = `${activeTable.value?.storeName} - ${activeTable.value?.number}`
+    }
   })
   .catch(() => {
     tableListData.value = []

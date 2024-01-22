@@ -5,11 +5,14 @@ import { ref, reactive, computed, watch } from "vue"
 import { type OrderMeal, type ReadData } from "@/api/order-list/types/order"
 import * as Order from "@/api/order-list/"
 
+import { useRoute } from "vue-router"
+
 import { storeToRefs } from "pinia"
 import { useCommonStore } from "@/store/modules/common"
 import { useMealsStore } from "@/store/modules/meals"
 import { useTablesStore } from "@/store/modules/tables"
 import { useOrdersStore } from "@/store/modules/orders"
+import { useTagsViewStore } from "@/store/modules/tags-view"
 
 import { type FormInstance, type TableInstance, ElMessage, ElMessageBox } from "element-plus"
 // import { Refresh, Delete, RefreshRight } from "@element-plus/icons-vue"
@@ -22,6 +25,8 @@ defineOptions({
   // 命名当前组件
   name: "OrderList"
 })
+
+const route = useRoute()
 
 const { paginationData, handleCurrentChange, handleSizeChange } = usePagination()
 const { thousandsSeparatorFormat } = useNumberFormat()
@@ -175,6 +180,19 @@ const selectMeal = (index: number) => {
   tableData.value[index].note = ""
 }
 
+// const selectOption = (select: any, activeOptionList: string[], option: string) => {
+//   const index = activeOptionList.indexOf(option)
+//   // +
+//   if (index < 0) {
+//     activeOptionList.push(option)
+//     while (activeOptionList.length > select.max) {
+//       activeOptionList.shift()
+//     }
+//   }
+//   // -
+//   else activeOptionList.splice(index, 1)
+// }
+
 const deleteTableData = (index: number) => {
   tableData.value.splice(index, 1)
 }
@@ -273,6 +291,10 @@ const payStatusArr = [
   }
 ]
 
+const delVisitedView = () => {
+  const index = visitedViews.value.findIndex((v) => v.path === route.path)
+  if (index !== -1) visitedViews.value.splice(index, 1)
+}
 const handleConfirmPay = (row: ReadData) => {
   if (!row) return
   ElMessageBox.confirm(`正在修改訂單:${row.orderId}的狀態為已付款，確認修改？`, "提示", {
@@ -283,6 +305,7 @@ const handleConfirmPay = (row: ReadData) => {
     Order.confirmPayApi(row.orderId).then(() => {
       ElMessage.success("修改成功")
       getOrderData()
+      delVisitedView()
     })
   })
 }
@@ -296,6 +319,7 @@ const handleCancel = (row: ReadData) => {
     Order.cancelDataApi(row.orderId).then(() => {
       ElMessage.success("取消成功")
       getOrderData()
+      delVisitedView()
     })
   })
 }
@@ -315,6 +339,8 @@ getTableData()
 const { loading, orderListData } = storeToRefs(useOrdersStore())
 const { getOrderData } = useOrdersStore()
 getOrderData()
+
+const { visitedViews } = storeToRefs(useTagsViewStore())
 //#endregion
 
 //#region 過濾
@@ -490,13 +516,22 @@ const pagefilterListData = computed<ReadData[]>(() => {
                 >取消</el-button
               >
               <el-button
+                v-if="scope.row.payStatus === 1"
+                type="info"
+                text
+                bg
+                size="small"
+                @click="handleCancel(scope.row)"
+                >作廢</el-button
+              >
+              <el-button
                 v-if="scope.row.payStatus === 1 || scope.row.payStatus === 2"
                 type="danger"
                 text
                 bg
                 size="small"
                 @click="handleDelete(scope.row)"
-                >刪除</el-button
+                >刪除(test用)</el-button
               >
             </template>
           </el-table-column>
@@ -568,7 +603,8 @@ const pagefilterListData = computed<ReadData[]>(() => {
           <template #default="scope2">
             <template v-for="(item, index) in scope2.row.selectList" :key="item.id">
               <div class="selectName">{{ item.selectName }} (max: {{ item.max }}, min: {{ item.min }})</div>
-              <el-checkbox-group v-model="item.activeOptionList" :max="item.max">
+              <el-checkbox-group v-model="item.activeOptionList">
+                <!-- @click="selectOption(item, item.activeOptionList, option)" -->
                 <el-checkbox v-for="option in item.showOptionList" :key="option" :label="option" size="small" />
               </el-checkbox-group>
               <div class="selectValid" :class="{ false: !selectValidList[scope2.$index][index] }" type="danger">
