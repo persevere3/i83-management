@@ -98,6 +98,7 @@ const shortcuts = [
 ]
 
 const activeDateRange = ref<any>([])
+activeDateRange.value = shortcuts[1].value()
 
 const resetSearch = () => {
   activeDateRange.value = []
