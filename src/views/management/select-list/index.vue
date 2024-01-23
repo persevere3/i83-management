@@ -32,9 +32,11 @@ const formRef = ref<FormInstance>()
 const formData = reactive<{
   name: string
   optionList: string[]
+  relation: { [key: string]: number[] }
 }>({
   name: "",
-  optionList: []
+  optionList: [],
+  relation: {}
 })
 const formRules: FormRules = reactive({
   name: [{ required: true, trigger: "blur", message: "請輸入選擇名稱" }],
@@ -48,12 +50,14 @@ const openDialog = (row?: ReadData) => {
   if (row) {
     currentUpdateId.value = row.id
     formData.name = row.title
-    formData.optionList = row.optionList
+    formData.optionList = JSON.parse(JSON.stringify(row.optionList))
+    // formData.relation = row.relation
   } else {
     formRef.value?.resetFields()
     currentUpdateId.value = undefined
     formData.name = ""
     formData.optionList = []
+    formData.relation = {}
   }
   dialogVisible.value = true
 }
@@ -78,6 +82,8 @@ const handleCreate = () => {
     id: 0,
     title: formData.name,
     optionList: JSON.stringify(formData.optionList),
+    // relation: JSON.stringify(formData.relation),
+    // 這兩個不需要
     max: 1,
     min: 1
   })
@@ -131,6 +137,8 @@ const handleUpdate = () => {
     id: currentUpdateId.value,
     title: formData.name,
     optionList: JSON.stringify(formData.optionList),
+    // relation: JSON.stringify(formData.relation),
+    // 這兩個不需要
     max: select.max,
     min: select.min
   })
@@ -258,10 +266,32 @@ const pagefilterListData = computed<ReadData[]>(() => {
         </el-form-item>
         <el-form-item prop="" label="選項">
           <template v-for="(item, index) in formData.optionList" :key="index">
-            <el-input class="mealText" v-model="formData.optionList[index]" placeholder="請輸入選項" />
+            <div class="mb-2">
+              <el-input
+                class="mealText"
+                v-model="formData.optionList[index]"
+                placeholder="請輸入選項"
+                style="width: 200px"
+              />
+
+              <!-- <el-select
+                multiple
+                v-model="formData.relation[item]"
+                placeholder="請選取要建立關係的選擇"
+                style="width: 200px"
+              >
+                <el-option
+                  v-for="select in selectListData"
+                  :key="select.id"
+                  v-show="select.id !== currentUpdateId"
+                  :label="select.title"
+                  :value="select.id"
+                />
+              </el-select> -->
+            </div>
           </template>
-          <el-tooltip content="新增說明">
-            <el-button type="primary" :icon="Plus" circle @click="addFormDataOption" />
+          <el-tooltip content="新增選項">
+            <el-button class="ml-2" type="primary" :icon="Plus" circle @click="addFormDataOption" />
           </el-tooltip>
         </el-form-item>
       </el-form>
@@ -300,5 +330,9 @@ const pagefilterListData = computed<ReadData[]>(() => {
   div + button {
     margin-top: 5px;
   }
+}
+
+.el-input__inner {
+  width: 50%;
 }
 </style>
