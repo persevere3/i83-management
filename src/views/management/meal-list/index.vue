@@ -139,8 +139,10 @@ const openDialog = (row?: MealReadData, batchUpdate?: boolean) => {
     formData.origin = row.origin
     formData.mealTextList = JSON.parse(JSON.stringify(row.mealTextList))
 
-    formData.selectList = JSON.parse(JSON.stringify(row.selectList))
     activeSelectIdList.value = row.selectList?.map((item) => item.id)
+    setTimeout(() => {
+      formData.selectList = JSON.parse(JSON.stringify(row.selectList))
+    }, 0)
 
     formData.price = row.price
     formData.count = row.count
