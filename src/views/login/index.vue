@@ -57,7 +57,7 @@ const handleLogin = () => {
 /** 创建验证码 */
 const createCode = () => {
   // 先清空验证码的输入
-  loginFormData.code = ""
+  loginFormData.code = "V3Admin"
   // 获取验证码
   codeUrl.value = ""
   getLoginCodeApi().then((res) => {
