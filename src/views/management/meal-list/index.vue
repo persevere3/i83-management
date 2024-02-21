@@ -284,8 +284,8 @@ const handleDelete = (row?: MealReadData) => {
 const handleUpdate = () => {
   const updateFormData = JSON.parse(JSON.stringify(formData))
   updateFormData.id = currentUpdateId.value
-  // 有傳 formData.file: (binary) 後端覆蓋原本是傳base64的image
-  // 沒傳 formData.file: 1, 後端維持原本的image
+  // 改圖   => file: (binary)，後端覆蓋原本的image(base64)
+  // 不改圖 => file: 1，後端維持原本的image
   if (process.env.NODE_ENV === "development") {
     updateFormData.image = image.value.replace("http://192.168.6.239", "")
   } else {
@@ -349,6 +349,41 @@ const handleBatchUpdate = () => {
     .finally(() => {
       dialogVisible.value = false
     })
+}
+
+const changeEnable = (id: number) => {
+  if (!id) return
+  const meal = mealListData.value.find((item) => item.id === id)
+  if (!meal) return
+
+  const newEnableText = meal.enable ? "關閉" : "開啟"
+  const text = `${newEnableText}${meal.mealName}，確認${newEnableText}？`
+
+  ElMessageBox.confirm(text, "提示", {
+    confirmButtonText: "確定",
+    cancelButtonText: "取消",
+    type: "warning"
+  }).then(() => {
+    const newMeal = JSON.parse(JSON.stringify(meal))
+    newMeal.enable = !newMeal.enable
+
+    if (process.env.NODE_ENV === "development") {
+      newMeal.image = newMeal.image.replace("http://192.168.6.239", "")
+    } else {
+      newMeal.image = newMeal.image.replace("https://preview.uniqcarttest.com", "")
+    }
+
+    Meal.updateDataApi(
+      objToFormData({
+        categorys: newMeal.category.map((item: MealReadData) => item.id),
+        products: [newMeal],
+        file: 1
+      })
+    ).then(() => {
+      ElMessage.success(`${newEnableText}成功`)
+      resetData()
+    })
+  })
 }
 //#endregion
 
@@ -497,13 +532,20 @@ const pagefilterListData = computed<MealReadData[]>(() => {
           <el-table-column label="價錢" width="100" align="center">
             <template #default="scope"> {{ thousandsSeparatorFormat(scope.row.price) }} </template>
           </el-table-column>
-          <el-table-column label="數量" width="100" align="center">
+          <!-- <el-table-column label="數量" width="100" align="center">
             <template #default="scope"> {{ scope.row.count }} </template>
-          </el-table-column>
+          </el-table-column> -->
           <el-table-column prop="status" label="狀態" width="80" align="center">
             <template #default="scope">
-              <el-tag v-if="scope.row.enable" type="success" effect="plain">啟用</el-tag>
-              <el-tag v-else type="danger" effect="plain">禁用</el-tag>
+              <el-tag v-if="scope.row.enable" type="success" effect="plain">開啟</el-tag>
+              <el-tag v-else type="danger" effect="plain">關閉</el-tag>
+              <el-switch
+                :model-value="scope.row.enable"
+                style="--el-switch-on-color: var(--el-color-success); --el-switch-off-color: var(--el-color-danger)"
+                :active-value="1"
+                :inactive-value="0"
+                @click="changeEnable(scope.row.id)"
+              />
             </template>
           </el-table-column>
           <el-table-column fixed="right" label="操作" width="80" align="center">
@@ -653,14 +695,14 @@ const pagefilterListData = computed<MealReadData[]>(() => {
         <el-form-item prop="price" label="價錢">
           <el-input v-model="formData.price" placeholder="請輸入價錢" />
         </el-form-item>
-        <el-form-item prop="count" label="數量">
+        <!-- <el-form-item prop="count" label="數量">
           <el-switch v-if="isBatchUpdate" v-model="isFormdataReset.count" inactive-text="清除" />
           <el-input :disabled="isFormdataReset.count" type="number" v-model="formData.count" placeholder="請輸入數量" />
-        </el-form-item>
+        </el-form-item> -->
         <el-form-item prop="enable" label="狀態">
           <el-select v-model="formData.enable" placeholder="狀態" style="width: 100%">
-            <el-option label="啟用" :value="1" />
-            <el-option label="禁用" :value="0" />
+            <el-option label="開啟" :value="1" />
+            <el-option label="關閉" :value="0" />
           </el-select>
         </el-form-item>
       </el-form>
@@ -749,7 +791,7 @@ const pagefilterListData = computed<MealReadData[]>(() => {
 .el-checkbox-group {
   width: 100%;
 }
-.el-switch {
+.el-dialog .el-switch {
   width: 100%;
 }
 </style>
