@@ -442,11 +442,11 @@ const pagefilterListData = computed<ReadData[]>(() => {
       <div class="table-wrapper">
         <!-- 必須加 row-key hover sortable 才不會有bug -->
         <el-table ref="tableRef" :data="pagefilterListData" row-key="orderId">
-          <el-table-column type="selection" width="50" align="center" />
           <el-table-column prop="orderId" label="訂單編號" width="120" align="center" />
           <el-table-column label="餐點" align="left">
             <template #default="scope">
               <el-table :data="scope.row.mealList" size="small">
+                <el-table-column type="selection" width="50" align="center" />
                 <el-table-column prop="mealName" label="名稱" width="120" align="center" />
                 <el-table-column label="價錢" width="80" align="center">
                   <template #default="scope2"> {{ thousandsSeparatorFormat(scope2.row.price) }} </template>
