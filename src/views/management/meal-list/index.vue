@@ -2,7 +2,7 @@
 import { ref, reactive, computed, watch, nextTick } from "vue"
 
 import { type ReadData as MealReadData, type CreateReqData } from "@/api/meal-list/types/meal"
-import { type MealReadData as SelectMealReadData } from "@/api/select-list/types/select"
+import { type MealSelectReadData } from "@/api/select-list/types/select"
 import * as Meal from "@/api/meal-list"
 import * as Category from "@/api/category-list"
 
@@ -38,10 +38,10 @@ const currentUpdateId = ref<number>()
 const formRef = ref<FormInstance>()
 const activeSelectIdList = ref<number[]>([])
 watch(activeSelectIdList, (newData, originData) => {
-  const newFormdataSelectList: SelectMealReadData[] = []
+  const newFormdataSelectList: MealSelectReadData[] = []
   newData.forEach((item) => {
     const originId = originData.find((item2) => item2 === item)
-    let newItem: SelectMealReadData | undefined
+    let newItem: MealSelectReadData | undefined
     if (originId) {
       newItem = formData.selectList?.find((item2) => item2.id === item)
     } else {

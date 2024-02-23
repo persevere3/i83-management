@@ -9,7 +9,7 @@ export interface CreateReqData {
   file: any
   origin?: string
   mealTextList?: string[]
-  selectList?: Select.MealReadData[]
+  selectList?: Select.MealSelectReadData[]
   price: number | undefined
   count?: string
   enable?: number
@@ -24,7 +24,7 @@ export interface ReadData {
   image: string
   origin: string
   mealTextList: string[]
-  selectList: Select.MealReadData[]
+  selectList: Select.MealSelectReadData[]
   price: number
   count: string
   enable: number
