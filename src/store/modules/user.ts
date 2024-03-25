@@ -1,15 +1,19 @@
 import { ref } from "vue"
 import store from "@/store"
-import { defineStore } from "pinia"
+import { defineStore, storeToRefs } from "pinia"
 import { usePermissionStore } from "./permission"
+import { useCommonStore } from "./common"
 import { useTagsViewStore } from "./tags-view"
 import { useSettingsStore } from "./settings"
 import { getToken, removeToken, setToken } from "@/utils/cache/cookies"
 import router, { resetRouter } from "@/router"
-import { loginApi, getUserInfoApi } from "@/api/login"
+// import { loginApi, getUserInfoApi } from "@/api/login"
+import { loginApi } from "@/api/login"
 import { type LoginRequestData } from "@/api/login/types/login"
 import { type RouteRecordRaw } from "vue-router"
-import routeSettings from "@/config/route"
+// import routeSettings from "@/config/route"
+
+import { type ReadData } from "@/api/store-list/types/store"
 
 export const useUserStore = defineStore("user", () => {
   const token = ref<string>(getToken() || "")
@@ -20,22 +24,56 @@ export const useUserStore = defineStore("user", () => {
   const tagsViewStore = useTagsViewStore()
   const settingsStore = useSettingsStore()
 
+  const { roleList, role, storeList, activeStore } = storeToRefs(useCommonStore())
+
   /** 设置角色数组 */
   const setRoles = (value: string[]) => {
     roles.value = value
   }
   /** 登录 */
-  const login = async ({ username, password, code }: LoginRequestData) => {
-    const { data } = await loginApi({ username, password, code })
+  const login = async ({ name, password }: LoginRequestData) => {
+    const { data } = await loginApi({ name, password })
     setToken(data.token)
-    token.value = data.token
+    localStorage.setItem("info", JSON.stringify(data))
+  }
+
+  /** 获取用户详情 */
+  const setSuperAdminStoreList = (stores: ReadData[]) => {
+    storeList.value = []
+    storeList.value.push({
+      id: 0,
+      storeName: "全部分店"
+    })
+    stores.forEach((item: any) => {
+      storeList.value.push(item)
+    })
   }
   /** 获取用户详情 */
   const getInfo = async () => {
-    const { data } = await getUserInfoApi()
-    username.value = data.username
+    // const { data } = await getUserInfoApi()
+
+    const info = JSON.parse(localStorage.getItem("info") || "")
+    token.value = info.token
+
+    // super-admin
+    if (info.storeList.length > 1) {
+      role.value = roleList.value[0]
+      roles.value = [role.value]
+
+      setSuperAdminStoreList(info.storeList)
+    }
+    // branch
+    else {
+      role.value = roleList.value[info.permissions]
+      roles.value = [role.value]
+
+      storeList.value = info.storeList
+    }
+    activeStore.value = JSON.parse(JSON.stringify(storeList.value[0]))
+
+    // username.value = data.username
     // 验证返回的 roles 是否为一个非空数组，否则塞入一个没有任何作用的默认角色，防止路由守卫逻辑进入无限循环
-    roles.value = data.roles?.length > 0 ? data.roles : routeSettings.defaultRoles
+    // roles.value = data.roles?.length > 0 ? data.roles : routeSettings.defaultRoles
   }
   /** 切换角色 */
   const changeRoles = async (role: string) => {
@@ -72,7 +110,7 @@ export const useUserStore = defineStore("user", () => {
     }
   }
 
-  return { token, roles, username, setRoles, login, getInfo, changeRoles, logout, resetToken }
+  return { token, roles, username, setRoles, login, setSuperAdminStoreList, getInfo, changeRoles, logout, resetToken }
 })
 
 /** 在 setup 外使用 */

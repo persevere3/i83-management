@@ -3,10 +3,13 @@ import { reactive, ref } from "vue"
 import { useRouter } from "vue-router"
 import { useUserStore } from "@/store/modules/user"
 import { type FormInstance, type FormRules } from "element-plus"
-import { User, Lock, Key, Picture, Loading } from "@element-plus/icons-vue"
-import { getLoginCodeApi } from "@/api/login"
+// import { User, Lock, Key, Picture, Loading } from "@element-plus/icons-vue"
+import { User, Lock } from "@element-plus/icons-vue"
 import { type LoginRequestData } from "@/api/login/types/login"
 import ThemeSwitch from "@/components/ThemeSwitch/index.vue"
+
+import { storeToRefs } from "pinia"
+import { useCommonStore } from "@/store/modules/common"
 
 const router = useRouter()
 
@@ -16,21 +19,18 @@ const loginFormRef = ref<FormInstance | null>(null)
 /** 登录按钮 Loading */
 const loading = ref(false)
 /** 验证码图片 URL */
-const codeUrl = ref("")
+// const codeUrl = ref("")
 /** 登录表单数据 */
 const loginFormData: LoginRequestData = reactive({
-  username: "admin",
-  password: "12345678",
-  code: ""
+  name: "admin",
+  password: "aa1234"
+  // code: ""
 })
 /** 登录表单校验规则 */
 const loginFormRules: FormRules = {
-  username: [{ required: true, message: "請輸入用戶名", trigger: "blur" }],
-  password: [
-    { required: true, message: "請輸入密碼", trigger: "blur" },
-    { min: 8, max: 16, message: "長度在 8 - 16 個字符", trigger: "blur" }
-  ],
-  code: [{ required: true, message: "請輸入驗證碼", trigger: "blur" }]
+  name: [{ required: true, message: "請輸入用戶名", trigger: "blur" }],
+  password: [{ required: true, message: "請輸入密碼", trigger: "blur" }]
+  // code: [{ required: true, message: "請輸入驗證碼", trigger: "blur" }]
 }
 /** 登录逻辑 */
 const handleLogin = () => {
@@ -40,10 +40,12 @@ const handleLogin = () => {
       useUserStore()
         .login(loginFormData)
         .then(() => {
-          router.push({ path: "/" })
+          const { role } = storeToRefs(useCommonStore())
+          if (role.value === "branch-backstage") router.push({ path: "/order-list" })
+          else router.push({ path: "/" })
         })
         .catch(() => {
-          createCode()
+          // createCode()
           loginFormData.password = ""
         })
         .finally(() => {
@@ -55,18 +57,18 @@ const handleLogin = () => {
   })
 }
 /** 创建验证码 */
-const createCode = () => {
-  // 先清空验证码的输入
-  loginFormData.code = "V3Admin"
-  // 获取验证码
-  codeUrl.value = ""
-  getLoginCodeApi().then((res) => {
-    codeUrl.value = res.data
-  })
-}
+// const createCode = () => {
+//   // 先清空验证码的输入
+//   loginFormData.code = "V3Admin"
+//   // 获取验证码
+//   codeUrl.value = ""
+//   getLoginCodeApi().then((res) => {
+//     codeUrl.value = res.data
+//   })
+// }
 
 /** 初始化验证码 */
-createCode()
+// createCode()
 </script>
 
 <template>
@@ -78,9 +80,9 @@ createCode()
       </div>
       <div class="content">
         <el-form ref="loginFormRef" :model="loginFormData" :rules="loginFormRules" @keyup.enter="handleLogin">
-          <el-form-item prop="username">
+          <el-form-item prop="name">
             <el-input
-              v-model.trim="loginFormData.username"
+              v-model.trim="loginFormData.name"
               placeholder="用戶名"
               type="text"
               tabindex="1"
@@ -99,7 +101,7 @@ createCode()
               show-password
             />
           </el-form-item>
-          <el-form-item prop="code">
+          <!-- <el-form-item prop="code">
             <el-input
               v-model.trim="loginFormData.code"
               placeholder="驗證碼"
@@ -124,7 +126,7 @@ createCode()
                 </el-image>
               </template>
             </el-input>
-          </el-form-item>
+          </el-form-item> -->
           <el-button :loading="loading" type="primary" size="large" @click.prevent="handleLogin">登 入</el-button>
         </el-form>
       </div>

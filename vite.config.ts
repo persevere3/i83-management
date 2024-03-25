@@ -36,23 +36,18 @@ export default (configEnv: ConfigEnv): UserConfigExport => {
       strictPort: false,
       /** 接口代理 */
       proxy: {
-        "/api/v1": {
-          target: "https://mock.mengxuegu.com/mock/63218b5fb4c53348ed2bc212",
-          ws: true,
-          /** 是否允许跨域 */
-          changeOrigin: true
-        },
         "/api": {
-          target: "http://192.168.6.239",
+          target: "https://preview.uniqcarttest.com",
           ws: true,
           /** 是否允许跨域 */
           changeOrigin: true
         },
-        "/GenerateOrder": {
-          target: "http://192.168.6.239",
+        "/ws": {
+          target: "http://preview.uniqcarttest.com",
           ws: true,
           /** 是否允许跨域 */
-          changeOrigin: true
+          changeOrigin: true,
+          rewrite: (o) => o.replace("/ws", "")
         }
       }
     },
