@@ -21,6 +21,8 @@ import { Refresh, RefreshRight } from "@element-plus/icons-vue"
 import { usePagination } from "@/hooks/usePagination"
 import { useNumberFormat } from "@/hooks/useNumberFormat"
 
+import OrderMealList from "@/components/OrderMealList/index.vue"
+
 defineOptions({
   // 命名当前组件
   name: "OrderList"
@@ -102,6 +104,11 @@ const resetDateSearch = () => {
 
 //#region table
 const tableRef = ref<TableInstance | null>(null)
+
+const mealListDialogVisible = ref(false)
+const activeMealList = ref()
+const activeMealListIndex = ref()
+
 //#endregion
 
 //#region 删
@@ -135,7 +142,7 @@ const handleDelete = (row?: ReadData) => {
 const dialogVisible = ref(false)
 const tableData = ref<OrderMeal[]>([])
 const currentUpdateId = ref<string>()
-const avtiveOrder = computed(() => {
+const activeOrder = computed(() => {
   return orderListData.value.find((item) => item.orderId === currentUpdateId.value)
 })
 
@@ -160,7 +167,7 @@ const addTableData = () => {
     id: "",
     mealName: "",
     price: 0,
-    count: "",
+    count: "1",
     selectList: [],
     note: ""
   })
@@ -233,10 +240,18 @@ const handleUpdate = () => {
   const resOrder = orderListData.value.find((item) => item.orderId === currentUpdateId.value)
   if (!resOrder) return
 
-  const total = tableData.value.reduce(
-    (accumulator: number, current) => accumulator + current.price * Number(current.count),
-    0
-  )
+  let total = 0
+  tableData.value.forEach((cartItem) => {
+    cartItem.selectList.forEach((select) => {
+      select.activeOptionList.forEach((option) => {
+        if (option.price && option.price > 0) {
+          total += option.price * Number(cartItem.count)
+        }
+      })
+    })
+    total += cartItem.price * Number(cartItem.count)
+  })
+
   const reqOrder = {
     orderId: resOrder.orderId,
     storeName: dialogActiveStore.value,
@@ -278,17 +293,40 @@ const payMethodArr = [
   },
   {
     label: "街口支付"
+  },
+  {
+    label: "全支付"
+  },
+  {
+    label: "悠遊卡"
   }
 ]
 const payStatusArr = [
   {
-    label: "尚未付款"
+    label: "待付款"
   },
   {
     label: "已付款"
   },
   {
     label: "取消"
+  }
+]
+const orderStatusArr = [
+  {
+    label: "待付款"
+  },
+  {
+    label: "待確認"
+  },
+  {
+    label: "準備中"
+  },
+  {
+    label: "取消"
+  },
+  {
+    label: "已完成"
   }
 ]
 
@@ -326,8 +364,79 @@ const handleCancel = (row: ReadData) => {
 }
 //#endregion
 
+//#region 生日優惠
+const handleBirthBonus = (row: ReadData) => {
+  ElMessageBox.prompt("請輸入生日優惠人數", "提示", {
+    confirmButtonText: "確定",
+    cancelButtonText: "取消",
+    inputPattern: /[0-9]*/,
+    inputErrorMessage: "Invalid"
+  }).then(({ value }) => {
+    // 取得優惠金額
+    Order.getBirthBonusPrice(row.orderId, Number(value))
+      .then((res: any) => {
+        const count = Number(value)
+        const { birthdayBonus: bonus, orderHistoryRemark: remark } = res
+        if (row.payStatus === 0) {
+          // 付款前
+          updateBirthBonus(row, count, bonus)
+        } else if (row.payStatus === 1) {
+          // 付款後，取得退款金額，再退款
+          birthBonusRefund(row.orderId, count, bonus, remark)
+        }
+      })
+      .catch(() => {
+        ElMessage.error("4份主餐以上才能使用生日優惠")
+      })
+  })
+}
+
+// 付款前，修改birthdayBonus
+const updateBirthBonus = (row: ReadData, count: number, bonus: number) => {
+  const newOrder = JSON.parse(JSON.stringify(row))
+  newOrder.payMethod = String(newOrder.payMethod)
+  newOrder.birthdayBonus = count
+  newOrder.total = newOrder.total - bonus
+  Order.updateDataApi(newOrder).then(() => {
+    ElMessage.success("新增生日優惠成功")
+    getOrderData()
+  })
+}
+
+// 付款後，生日優惠退款
+const birthBonusRefund = (orderId: string, count: number, bonus: number, remark: string) => {
+  Order.birthRefund(orderId, count, bonus, remark)
+    .then(() => {
+      ElMessage.success("新增生日優惠成功")
+      getOrderData()
+      delVisitedView()
+    })
+    .catch(() => {
+      ElMessage.error("新增生日優惠失敗")
+    })
+}
+//#endregion
+
+//#region 後台改變餐點狀態
+const preparingOrder = (orderId: string) => {
+  Order.preparingOrder(orderId).then(() => {
+    ElMessage.success(`${orderId} 開始備餐`)
+    getOrderData()
+    delVisitedView()
+  })
+}
+
+const doneOrder = (orderId: string) => {
+  Order.doneOrder(orderId).then(() => {
+    ElMessage.success(`${orderId} 備餐完成`)
+    getOrderData()
+    delVisitedView()
+  })
+}
+//#endregion
+
 //#region 查
-const { storeList, activeStore } = storeToRefs(useCommonStore())
+const { role, storeList, activeStore } = storeToRefs(useCommonStore())
 
 const { mealListData } = storeToRefs(useMealsStore())
 const { getMealData } = useMealsStore()
@@ -362,9 +471,10 @@ const filterListData = computed<ReadData[]>(() => {
       return createTime >= startTime && createTime <= endTime
     })
   }
+
   return orderList
     .filter((item) => item.orderId.indexOf(searchData.orderId) > -1)
-    .filter((item) => activeStore.value === "全部分店" || item.storeName === activeStore.value)
+    .filter((item) => activeStore.value?.id === 0 || item.storeName === activeStore.value?.storeName)
 })
 watch(
   filterListData,
@@ -390,6 +500,25 @@ watch(
 )
 const pagefilterListData = computed<ReadData[]>(() => {
   return filterListData.value.filter((item, index) => index >= startIndex.value && index <= endIndex.value)
+})
+
+const ordersMealsUnitPriceList = ref<number[][]>([])
+watch(pagefilterListData, () => {
+  ordersMealsUnitPriceList.value = []
+  pagefilterListData.value.forEach((order, index) => {
+    ordersMealsUnitPriceList.value[index] = []
+    order.mealList.forEach((meal, index2) => {
+      ordersMealsUnitPriceList.value[index][index2] = 0
+      meal.selectList.forEach((select) => {
+        select.activeOptionList.forEach((option) => {
+          if (option.price && option.price > 0) {
+            ordersMealsUnitPriceList.value[index][index2] += option.price
+          }
+        })
+      })
+      ordersMealsUnitPriceList.value[index][index2] += meal.price
+    })
+  })
 })
 //#endregion
 </script>
@@ -441,102 +570,206 @@ const pagefilterListData = computed<ReadData[]>(() => {
       </div>
       <div class="table-wrapper">
         <!-- 必須加 row-key hover sortable 才不會有bug -->
-        <el-table ref="tableRef" :data="pagefilterListData" row-key="orderId">
-          <el-table-column prop="orderId" label="訂單編號" width="120" align="center" />
-          <el-table-column label="餐點" align="left">
-            <template #default="scope">
-              <el-table :data="scope.row.mealList" size="small">
-                <el-table-column type="selection" width="50" align="center" />
-                <el-table-column prop="mealName" label="名稱" width="120" align="center" />
-                <el-table-column label="價錢" width="80" align="center">
-                  <template #default="scope2"> {{ thousandsSeparatorFormat(scope2.row.price) }} </template>
-                </el-table-column>
-                <el-table-column prop="count" label="數量" width="80" align="center" />
-                <el-table-column label="選擇" class="selectList">
-                  <template #default="scope2">
-                    <template v-for="item in scope2.row.selectList" :key="item.id">
-                      <div v-for="item2 in item.activeOptionList" :key="item2">- {{ item2 }}</div>
-                    </template>
-                  </template>
-                </el-table-column>
-                <el-table-column prop="note" label="備註" />
-              </el-table>
-            </template>
-          </el-table-column>
-          <el-table-column label="合計" width="100" align="center">
-            <template #default="scope"> {{ thousandsSeparatorFormat(scope.row.total) }} </template>
-          </el-table-column>
-          <el-table-column label="分店 / 桌號" width="100" align="center">
-            <template #default="scope">
-              <div>{{ scope.row.storeName }}</div>
-              <div>{{ scope.row.tableNumber }}</div>
-            </template>
-          </el-table-column>
-          <el-table-column label="付款方式 / 付款狀態" width="100" align="center">
-            <template #default="scope">
-              <div>{{ payMethodArr[scope.row.payMethod].label }}</div>
-              <div>
-                <el-tag
-                  :type="scope.row.payStatus === 0 ? 'danger' : scope.row.payStatus === 1 ? 'success' : 'info'"
-                  effect="plain"
-                  >{{ payStatusArr[scope.row.payStatus].label }}</el-tag
+        <template v-if="['super-admin', 'branch-admin'].includes(role)">
+          <el-table ref="tableRef" :data="pagefilterListData" row-key="orderId">
+            <el-table-column label="訂單編號 / 分店桌號" width="120" align="center">
+              <template #default="scope">
+                <div>{{ scope.row.orderId }}</div>
+                <div class="mt-5">{{ scope.row.storeName }} - {{ scope.row.tableNumber }}</div>
+              </template>
+            </el-table-column>
+            <el-table-column label="餐點" align="left">
+              <template #default="scope">
+                <OrderMealList
+                  :mealList="scope.row.mealList"
+                  :orderListIndex="scope.$index"
+                  :ordersMealsUnitPriceList="ordersMealsUnitPriceList"
+                />
+              </template>
+            </el-table-column>
+            <el-table-column label="合計" width="100" align="center">
+              <template #default="scope">
+                <div>{{ thousandsSeparatorFormat(scope.row.total) }}</div>
+                <template v-if="scope.row.originTotal - scope.row.total > 0">
+                  <div>優惠({{ thousandsSeparatorFormat(scope.row.originTotal - scope.row.total) }})</div>
+                </template>
+              </template>
+            </el-table-column>
+            <el-table-column label="訂單狀態" width="100" align="center">
+              <template #default="scope">
+                <div>成立時間</div>
+                <div>{{ scope.row.orderTime }}</div>
+                <div class="mt-5">
+                  <el-tag
+                    :type="
+                      scope.row.orderStatus === 0
+                        ? 'danger'
+                        : scope.row.orderStatus === 3
+                        ? 'info'
+                        : scope.row.orderStatus === 4
+                        ? 'success'
+                        : ''
+                    "
+                    effect="plain"
+                    >{{ orderStatusArr[scope.row.orderStatus].label }}</el-tag
+                  >
+                </div>
+              </template>
+            </el-table-column>
+
+            <el-table-column label="付款狀態" width="100" align="center">
+              <template #default="scope">
+                <div>{{ payMethodArr[scope.row.payMethod].label }}</div>
+                <div class="mt-5">
+                  <el-tag
+                    :type="scope.row.payStatus === 0 ? 'danger' : scope.row.payStatus === 1 ? 'success' : 'info'"
+                    effect="plain"
+                    >{{ payStatusArr[scope.row.payStatus].label }}</el-tag
+                  >
+                </div>
+                <div v-if="scope.row.payOrderId">{{ scope.row.payOrderId }}</div>
+                <div v-if="scope.row.payTime">{{ scope.row.payTime }}</div>
+              </template>
+            </el-table-column>
+
+            <el-table-column fixed="right" label="操作" width="100" align="center">
+              <template #default="scope">
+                <el-button
+                  type="primary"
+                  text
+                  bg
+                  size="small"
+                  @click="
+                    (activeMealList = scope.row.mealList),
+                      (activeMealListIndex = scope.$index),
+                      (mealListDialogVisible = true)
+                  "
+                  >餐點詳情</el-button
                 >
-              </div>
-            </template>
-          </el-table-column>
-          <el-table-column prop="orderTime" label="成立時間" width="100" align="center" />
-          <el-table-column fixed="right" label="操作" width="100" align="center">
-            <template #default="scope">
-              <el-button
-                v-if="scope.row.payStatus === 0"
-                class="mb-1"
-                type="warning"
-                text
-                bg
-                size="small"
-                @click="openDialog(scope.row)"
-                >修改訂單</el-button
-              >
-              <el-button
-                v-if="scope.row.payMethod === 0 && scope.row.payStatus === 0"
-                class="mb-1"
-                type="primary"
-                text
-                bg
-                size="small"
-                @click="handleConfirmPay(scope.row)"
-                >確認付款</el-button
-              >
-              <el-button
-                v-if="scope.row.payStatus === 0"
-                type="info"
-                text
-                bg
-                size="small"
-                @click="handleCancel(scope.row)"
-                >取消</el-button
-              >
-              <el-button
-                v-if="scope.row.payStatus === 1"
-                type="info"
-                text
-                bg
-                size="small"
-                @click="handleCancel(scope.row)"
-                >作廢</el-button
-              >
-              <el-button
-                v-if="scope.row.payStatus === 1 || scope.row.payStatus === 2"
-                type="danger"
-                text
-                bg
-                size="small"
-                @click="handleDelete(scope.row)"
-                >刪除(test用)</el-button
-              >
-            </template>
-          </el-table-column>
-        </el-table>
+                <el-button
+                  v-if="scope.row.birthdayBonus < 1"
+                  class="mb-1 mt-5"
+                  type="warning"
+                  text
+                  bg
+                  size="small"
+                  @click="handleBirthBonus(scope.row)"
+                  >生日優惠</el-button
+                >
+                <el-button
+                  v-if="scope.row.payStatus === 0"
+                  class="mb-1"
+                  type="warning"
+                  text
+                  bg
+                  size="small"
+                  @click="openDialog(scope.row)"
+                  >修改訂單</el-button
+                >
+                <el-button
+                  v-if="scope.row.payMethod === 0 && scope.row.payStatus === 0"
+                  class="mb-1"
+                  type="primary"
+                  text
+                  bg
+                  size="small"
+                  @click="handleConfirmPay(scope.row)"
+                  >確認付款</el-button
+                >
+                <el-button
+                  v-if="scope.row.payStatus === 0"
+                  type="info"
+                  text
+                  bg
+                  size="small"
+                  @click="handleCancel(scope.row)"
+                  >取消</el-button
+                >
+                <el-button
+                  v-if="scope.row.payStatus === 1"
+                  type="info"
+                  text
+                  bg
+                  size="small"
+                  @click="handleCancel(scope.row)"
+                  >作廢</el-button
+                >
+                <el-button
+                  v-if="scope.row.payStatus === 1 || scope.row.payStatus === 2"
+                  type="danger"
+                  text
+                  bg
+                  size="small"
+                  @click="handleDelete(scope.row)"
+                  >刪除(test用)</el-button
+                >
+              </template>
+            </el-table-column>
+          </el-table>
+        </template>
+        <template v-if="['branch-backstage'].includes(role)">
+          <el-table ref="tableRef" :data="pagefilterListData" row-key="orderId">
+            <el-table-column label="訂單編號 / 分店桌號" width="120" align="center">
+              <template #default="scope">
+                <div>{{ scope.row.orderId }}</div>
+                <div class="mt-5">{{ scope.row.storeName }} - {{ scope.row.tableNumber }}</div>
+              </template>
+            </el-table-column>
+            <el-table-column label="餐點" align="left">
+              <template #default="scope">
+                <OrderMealList :mealList="scope.row.mealList" :ordersMealsUnitPriceList="ordersMealsUnitPriceList" />
+              </template>
+            </el-table-column>
+            <el-table-column label="時間" width="100" align="center">
+              <template #default="scope">
+                <div>成立時間</div>
+                <div>{{ scope.row.orderTime }}</div>
+                <template v-if="scope.row.payTime">
+                  <div>付款時間</div>
+                  <div>{{ scope.row.payTime }}</div>
+                </template>
+              </template>
+            </el-table-column>
+            <el-table-column fixed="right" label="操作" width="120" align="center">
+              <template #default="scope">
+                <el-button
+                  type="primary"
+                  text
+                  bg
+                  size="small"
+                  @click="
+                    (activeMealList = scope.row.mealList),
+                      (activeMealListIndex = scope.$index),
+                      (mealListDialogVisible = true)
+                  "
+                  >餐點詳情</el-button
+                >
+                <el-button
+                  v-if="scope.row.orderStatus === 1"
+                  class="mt-5"
+                  type="warning"
+                  text
+                  bg
+                  size="small"
+                  @click="preparingOrder(scope.row.orderId)"
+                >
+                  開始備餐
+                </el-button>
+                <el-button
+                  v-if="scope.row.orderStatus === 2"
+                  class="mt-5"
+                  type="success"
+                  text
+                  bg
+                  size="small"
+                  @click="doneOrder(scope.row.orderId)"
+                >
+                  備餐完成
+                </el-button>
+              </template>
+            </el-table-column>
+          </el-table>
+        </template>
       </div>
       <div class="pager-wrapper">
         <el-pagination
@@ -556,8 +789,14 @@ const pagefilterListData = computed<ReadData[]>(() => {
     <el-dialog v-model="dialogVisible" title="修改訂單" width="70%">
       <div class="toolbar-wrapper">
         <div>
-          <el-select v-model="dialogActiveStore" placeholder="請選擇分店" style="width: 50%">
-            <el-option v-for="item in storeList" :key="item" v-show="item !== '全部分店'" :label="item" :value="item" />
+          <el-select v-model="dialogActiveStore" key-value="id" placeholder="請選擇分店" style="width: 50%">
+            <el-option
+              v-for="item in storeList"
+              :key="item.id"
+              v-show="item.id !== 0"
+              :label="item.storeName"
+              :value="item.storeName"
+            />
           </el-select>
           <el-select v-model="dialogActiveTable" placeholder="請選擇桌號" style="width: 50%">
             <el-option
@@ -566,7 +805,7 @@ const pagefilterListData = computed<ReadData[]>(() => {
               v-show="
                 item.storeName === dialogActiveStore &&
                 (item.enable === 0 ||
-                  (item.storeName === avtiveOrder?.storeName && item.number === avtiveOrder.tableNumber))
+                  (item.storeName === activeOrder?.storeName && item.number === activeOrder.tableNumber))
               "
               :label="item.number"
               :value="item.number"
@@ -592,9 +831,6 @@ const pagefilterListData = computed<ReadData[]>(() => {
             </el-select>
           </template>
         </el-table-column>
-        <el-table-column label="價錢" width="80" align="center">
-          <template #default="scope2"> {{ thousandsSeparatorFormat(scope2.row.price) }} </template>
-        </el-table-column>
         <el-table-column prop="count" label="數量" width="180" align="center">
           <template #default="scope2">
             <el-input-number v-model="scope2.row.count" :min="1" />
@@ -606,7 +842,9 @@ const pagefilterListData = computed<ReadData[]>(() => {
               <div class="selectName">{{ item.selectName }} (max: {{ item.max }}, min: {{ item.min }})</div>
               <el-checkbox-group v-model="item.activeOptionList">
                 <!-- @click="selectOption(item, item.activeOptionList, option)" -->
-                <el-checkbox v-for="option in item.showOptionList" :key="option" :label="option" size="small" />
+                <el-checkbox v-for="option in item.showOptionList" :key="option" :label="option" size="small">
+                  {{ option.title }} <span v-if="option.price > 0"> (+{{ option.price }}) </span>
+                </el-checkbox>
               </el-checkbox-group>
               <div class="selectValid" :class="{ false: !selectValidList[scope2.$index][index] }" type="danger">
                 最少選擇 {{ item.min }}，最多選擇 {{ item.max }}
@@ -629,6 +867,15 @@ const pagefilterListData = computed<ReadData[]>(() => {
         <el-button @click="dialogVisible = false">取消</el-button>
         <el-button type="primary" @click="handleUpdate()">確認</el-button>
       </template>
+    </el-dialog>
+
+    <!-- 餐點詳情 -->
+    <el-dialog v-model="mealListDialogVisible" title="餐點詳情" width="70%">
+      <OrderMealList
+        :mealList="activeMealList"
+        :orderListIndex="activeMealListIndex"
+        :ordersMealsUnitPriceList="ordersMealsUnitPriceList"
+      />
     </el-dialog>
   </div>
 </template>
@@ -681,5 +928,9 @@ const pagefilterListData = computed<ReadData[]>(() => {
   &.false {
     opacity: 1;
   }
+}
+
+.mt-5 {
+  margin-top: 5px;
 }
 </style>
