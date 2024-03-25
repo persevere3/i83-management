@@ -13,7 +13,7 @@ import Sidebar from "../Sidebar/index.vue"
 import ThemeSwitch from "@/components/ThemeSwitch/index.vue"
 import Screenfull from "@/components/Screenfull/index.vue"
 // import SearchMenu from "@/components/SearchMenu/index.vue"
-import Table from "./Table.vue"
+import Store from "./Store.vue"
 import { DeviceEnum } from "@/constants/app-key"
 
 const router = useRouter()
@@ -46,15 +46,15 @@ const logout = () => {
     <Breadcrumb v-if="!isTop || isMobile" class="breadcrumb" />
     <Sidebar v-if="isTop && !isMobile" class="sidebar" />
     <div class="right-menu">
-      <Table />
       <!-- <SearchMenu v-if="showSearchMenu" class="right-menu-item" /> -->
       <ThemeSwitch v-if="showThemeSwitch" class="right-menu-item" />
       <Screenfull v-if="showScreenfull" class="right-menu-item" />
       <!-- <Notify v-if="showNotify" class="right-menu-item" /> -->
+      <Store />
       <el-dropdown class="right-menu-item">
         <div class="right-menu-avatar">
           <el-avatar :icon="UserFilled" :size="30" />
-          <span>{{ userStore.username }}</span>
+          <!-- <span>{{ userStore.username }}</span> -->
         </div>
         <template #dropdown>
           <el-dropdown-menu>
