@@ -5,6 +5,7 @@ import { type ReadData } from "@/api/category-list/types/category"
 import * as Category from "@/api/category-list/"
 
 import { storeToRefs } from "pinia"
+import { useCommonStore } from "@/store/modules/common"
 import { useCategoriesStore } from "@/store/modules/categories"
 import { useMealsStore } from "@/store/modules/meals"
 
@@ -141,6 +142,8 @@ const handleUpdate = () => {
 //#endregion
 
 //#region 查
+const { role } = storeToRefs(useCommonStore())
+
 const { loading, categoryListData } = storeToRefs(useCategoriesStore())
 const { getCategoryData } = useCategoriesStore()
 getCategoryData()
@@ -210,8 +213,10 @@ const pagefilterListData = computed<ReadData[]>(() => {
     <el-card v-loading="loading" shadow="never">
       <div class="toolbar-wrapper">
         <div>
-          <el-button type="primary" :icon="CirclePlus" @click="openDialog()">新增分類</el-button>
-          <el-button type="danger" :icon="Delete" @click="handleDelete()">批量刪除</el-button>
+          <template v-if="role === 'super-admin'">
+            <el-button type="primary" :icon="CirclePlus" @click="openDialog()">新增分類</el-button>
+            <el-button type="danger" :icon="Delete" @click="handleDelete()">批量刪除</el-button>
+          </template>
         </div>
         <div>
           <!-- <el-tooltip content="下载">
@@ -228,7 +233,7 @@ const pagefilterListData = computed<ReadData[]>(() => {
           <el-table-column type="selection" width="50" align="center" />
           <el-table-column prop="name" label="分類名稱" align="center" />
           <el-table-column prop="text" label="分類說明" align="left" />
-          <el-table-column fixed="right" label="操作" width="150" align="center">
+          <el-table-column v-if="role === 'super-admin'" fixed="right" label="操作" width="150" align="center">
             <template #default="scope">
               <el-button type="primary" text bg size="small" @click="openDialog(scope.row)">修改</el-button>
               <el-button type="danger" text bg size="small" @click="handleDelete(scope.row)">删除</el-button>

@@ -1,6 +1,10 @@
 import { requestFormData, requestJson } from "@/utils/service"
 import type * as Meal from "./types/meal"
 
+import { storeToRefs } from "pinia"
+import { useCommonStore } from "@/store/modules/common"
+const { activeStore } = storeToRefs(useCommonStore())
+
 /** 增 */
 export function createDataApi(data: any) {
   return requestFormData({
@@ -27,11 +31,18 @@ export function updateDataApi(data: any) {
     data
   })
 }
+export function updateBranchEnableApi(data: Meal.UpdateEnableReqData) {
+  return requestJson({
+    url: `Stores/StoreUpdateProducts`,
+    method: "post",
+    data
+  })
+}
 
 /** 查 */
 export function getDataApi() {
   return requestJson<Meal.ReadResData>({
-    url: "Products",
+    url: `Products${activeStore.value?.id !== 0 ? `?storeId=${activeStore.value?.id}` : ""}`,
     method: "get"
   })
 }

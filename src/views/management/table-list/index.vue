@@ -51,7 +51,7 @@ const openDialog = (row?: ReadData) => {
     currentUpdateId.value = undefined
     formData.storeName = ""
     formData.number = ""
-    if (activeStore.value !== "全部分店") formData.storeName = activeStore.value
+    if (activeStore.value?.id !== 0) formData.storeName = activeStore.value?.storeName || ""
   }
   dialogVisible.value = true
 }
@@ -76,7 +76,6 @@ const handleCreate = () => {
   if (table) {
     ElMessageBox.confirm("桌號不可重複", "提示", {
       confirmButtonText: "確定",
-
       type: "warning"
     })
     return
@@ -158,20 +157,29 @@ const statusFormRef = ref<FormInstance>()
 const statusFormData = reactive<{
   storeName: string
   id: number | ""
+  birthdayBonus: number
 }>({
   storeName: "",
-  id: ""
+  id: "",
+  birthdayBonus: 0
 })
 const statusFormRules: FormRules = reactive({
   storeName: [{ required: true, trigger: "blur", message: "請選擇分店" }],
   id: [{ required: true, trigger: "blur", message: "請選擇桌號" }]
 })
-const openStatusDialog = (isEnable: boolean) => {
+const openStatusDialog = (isEnable: boolean, row?: ReadData) => {
   statusFormRef.value?.resetFields()
   enable.value = isEnable
-  statusFormData.storeName = ""
-  statusFormData.id = ""
-  if (activeStore.value !== "全部分店") statusFormData.storeName = activeStore.value
+  if (row) {
+    statusFormData.storeName = row.storeName
+    statusFormData.id = row.id
+    statusFormData.birthdayBonus = 0
+  } else {
+    statusFormData.storeName = ""
+    statusFormData.id = ""
+    statusFormData.birthdayBonus = 0
+  }
+  if (activeStore.value?.id !== 0) statusFormData.storeName = activeStore.value?.storeName || ""
   statusDialogVisible.value = true
 }
 const handleStatusConfirm = () => {
@@ -190,13 +198,13 @@ const handleEnable = (id: number | "") => {
   if (!id) return
   const table = tableListData.value.find((item) => item.id === id)
   if (!table) return
-  const text = `開啟${table.storeName}分店-桌號${table.number}，確認開啟？`
+  const text = `開啟${table.storeName}-${table.number}，確認開啟？`
   ElMessageBox.confirm(text, "提示", {
     confirmButtonText: "確定",
     cancelButtonText: "取消",
     type: "warning"
   }).then(() => {
-    Table.enableApi(id)
+    Table.enableApi(id, statusFormData.birthdayBonus)
       .then(() => {
         ElMessage.success("開啟成功")
         getTableData()
@@ -209,6 +217,7 @@ const handleEnable = (id: number | "") => {
 const handleDisable = (id: number | "") => {
   const table = tableListData.value.find((item) => item.id === id)
   if (!table) return
+  if (table.enable !== 1) return
   const text = `關閉${table.storeName}分店-桌號${table.number}，確認關閉？`
   ElMessageBox.confirm(text, "提示", {
     confirmButtonText: "確定",
@@ -236,18 +245,17 @@ const handleDisable = (id: number | "") => {
 //#region 查
 const tableEnableArr = [
   {
-    label: "未啟用"
+    label: "關閉"
   },
   {
-    label: "已啟用"
+    label: "開啟"
   },
   {
     label: "已新增訂單"
   }
 ]
 
-const { storeList, activeStore } = storeToRefs(useCommonStore())
-
+const { role, storeList, activeStore } = storeToRefs(useCommonStore())
 const { loading, tableListData } = storeToRefs(useTablesStore())
 const { getTableData } = useTablesStore()
 getTableData()
@@ -266,7 +274,7 @@ const activeStatus = ref<boolean | null>(null)
 const filterListData = computed<ReadData[]>(() => {
   let list = tableListData.value
   // 分店
-  if (activeStore.value !== "全部分店") list = list.filter((item) => item.storeName === activeStore.value)
+  if (activeStore.value?.id !== 0) list = list.filter((item) => item.storeName === activeStore.value?.storeName)
   // 桌號
   list = list.filter((item) => item.number.indexOf(searchData.number) > -1)
   // 開啟/關閉
@@ -318,12 +326,12 @@ const pagefilterListData = computed<ReadData[]>(() => {
     <el-card v-loading="loading" shadow="never">
       <div class="toolbar-wrapper">
         <div>
-          <el-button type="primary" :icon="CirclePlus" @click="openDialog()">新增桌號</el-button>
-          <el-button class="mr-20" type="danger" :icon="Delete" @click="handleDelete()">批量刪除</el-button>
+          <template v-if="role === 'super-admin'">
+            <el-button type="primary" :icon="CirclePlus" @click="openDialog()">新增桌號</el-button>
+            <el-button class="mr-20" type="danger" :icon="Delete" @click="handleDelete()">批量刪除</el-button>
+          </template>
         </div>
         <div>
-          <el-button type="primary" :icon="CirclePlus" @click="openStatusDialog(true)">開啟桌號</el-button>
-          <el-button type="danger" :icon="Delete" @click="openStatusDialog(false)">關閉桌號</el-button>
           <el-tooltip content="刷新當前頁">
             <el-button type="primary" :icon="RefreshRight" circle @click="getTableData" />
           </el-tooltip>
@@ -333,23 +341,27 @@ const pagefilterListData = computed<ReadData[]>(() => {
         <div>
           <el-button :type="activeStatus === null ? 'success' : 'info'" @click="activeStatus = null">
             全部 ({{
-              tableListData.filter((item) => activeStore === "全部分店" || item.storeName === activeStore).length
+              tableListData.filter((item) => activeStore?.id === 0 || item.storeName === activeStore?.storeName).length
             }})</el-button
           >
           <el-button :type="activeStatus === true ? 'success' : 'info'" @click="activeStatus = true">
             啟用 ({{
               tableListData
-                .filter((item) => activeStore === "全部分店" || item.storeName === activeStore)
+                .filter((item) => activeStore?.id === 0 || item.storeName === activeStore?.storeName)
                 .filter((item) => item.enable).length
             }})
           </el-button>
           <el-button :type="activeStatus === false ? 'success' : 'info'" @click="activeStatus = false">
             未啟用 ({{
               tableListData
-                .filter((item) => activeStore === "全部分店" || item.storeName === activeStore)
+                .filter((item) => activeStore?.id === 0 || item.storeName === activeStore?.storeName)
                 .filter((item) => !item.enable).length
             }})
           </el-button>
+        </div>
+        <div>
+          <el-button type="primary" :icon="CirclePlus" @click="openStatusDialog(true)">開啟桌號</el-button>
+          <el-button type="danger" :icon="Delete" @click="openStatusDialog(false)">關閉桌號</el-button>
         </div>
       </div>
       <div class="table-wrapper">
@@ -363,12 +375,13 @@ const pagefilterListData = computed<ReadData[]>(() => {
               <router-link :to="`/customer/${scope.row.id}`" v-if="scope.row.orderToken && scope.row.number">
                 <QRCodeVue3
                   myclass="qrcode"
-                  :width="50"
-                  :height="50"
-                  :value="`https://i83.vercel.app/?queryToken=${scope.row.orderToken}`"
+                  :width="60"
+                  :height="60"
+                  :value="`https://i83.vercel.app/?tableId=${scope.row?.id}`"
                   :dotsOptions="{ type: 'classy' }"
                 />
               </router-link>
+              <div v-if="scope.row.orderToken">http://localhost:3000/?tableId={{ scope.row.id }}</div>
             </template>
           </el-table-column>
           <el-table-column prop="status" label="狀態" width="120" align="center">
@@ -381,12 +394,21 @@ const pagefilterListData = computed<ReadData[]>(() => {
               >
                 {{ tableEnableArr[scope.row.enable].label }}
               </el-tag>
-              <el-tag v-else type="danger" effect="plain" @click="handleEnable(scope.row.id)">
+              <el-tag v-else type="danger" effect="plain">
                 {{ tableEnableArr[scope.row.enable].label }}
               </el-tag>
+              <div>
+                <el-switch
+                  :model-value="scope.row.enable ? 1 : 0"
+                  style="--el-switch-on-color: var(--el-color-success); --el-switch-off-color: var(--el-color-danger)"
+                  :active-value="1"
+                  :inactive-value="0"
+                  @click="scope.row.enable ? handleDisable(scope.row.id) : openStatusDialog(true, scope.row)"
+                />
+              </div>
             </template>
           </el-table-column>
-          <el-table-column fixed="right" label="操作" width="200" align="center">
+          <el-table-column v-if="role === 'super-admin'" fixed="right" label="操作" width="200" align="center">
             <template #default="scope">
               <el-button type="primary" text bg size="small" @click="openDialog(scope.row)">修改</el-button>
               <el-button type="danger" text bg size="small" @click="handleDelete(scope.row)">删除</el-button>
@@ -412,7 +434,13 @@ const pagefilterListData = computed<ReadData[]>(() => {
       <el-form ref="formRef" :model="formData" :rules="formRules" label-width="100px" label-position="left">
         <el-form-item prop="storeName" label="分店">
           <el-select v-model="formData.storeName" placeholder="請選擇分店" style="width: 100%">
-            <el-option v-for="item in storeList" :key="item" v-show="item !== '全部分店'" :label="item" :value="item" />
+            <el-option
+              v-for="item in storeList"
+              :key="item.id"
+              v-show="item.id !== 0"
+              :label="item.storeName"
+              :value="item.storeName"
+            />
           </el-select>
         </el-form-item>
         <el-form-item prop="number" label="桌號">
@@ -435,8 +463,19 @@ const pagefilterListData = computed<ReadData[]>(() => {
         label-position="left"
       >
         <el-form-item prop="storeName" label="分店">
-          <el-select v-model="statusFormData.storeName" placeholder="請選擇分店" style="width: 100%">
-            <el-option v-for="item in storeList" :key="item" v-show="item !== '全部分店'" :label="item" :value="item" />
+          <el-select
+            :disabled="role !== 'super-admin'"
+            v-model="statusFormData.storeName"
+            placeholder="請選擇分店"
+            style="width: 100%"
+          >
+            <el-option
+              v-for="item in storeList"
+              :key="item.id"
+              v-show="item.id !== 0"
+              :label="item.storeName"
+              :value="item.storeName"
+            />
           </el-select>
         </el-form-item>
         <el-form-item prop="number" label="桌號">
@@ -451,6 +490,9 @@ const pagefilterListData = computed<ReadData[]>(() => {
               :value="item.id"
             />
           </el-select>
+        </el-form-item>
+        <el-form-item v-if="enable === true" prop="birthdayBonus" label="當月壽星優惠人數">
+          <el-input v-model="statusFormData.birthdayBonus" placeholder="請輸入當月壽星優惠人數" />
         </el-form-item>
       </el-form>
       <template #footer>

@@ -1,6 +1,10 @@
 import { requestJson } from "@/utils/service"
 import type * as Category from "./types/category"
 
+import { storeToRefs } from "pinia"
+import { useCommonStore } from "@/store/modules/common"
+const { activeStore } = storeToRefs(useCommonStore())
+
 /** 增 */
 export function createDataApi(data: Category.CreateReqData) {
   return requestJson({
@@ -31,7 +35,7 @@ export function updateDataApi(data: Category.UpdateReqData) {
 /** 查 */
 export function getDataApi() {
   return requestJson<Category.ReadResData>({
-    url: "Categories",
+    url: `Categories${activeStore.value?.id !== 0 ? `?storeId=${activeStore.value?.id}` : ""}`,
     method: "get"
   })
 }

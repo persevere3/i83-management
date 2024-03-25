@@ -34,7 +34,7 @@ export const useMealsStore = defineStore("meals", () => {
       .then((res) => {
         if (process.env.NODE_ENV === "development") {
           res.forEach((item) => {
-            item.image = "http://192.168.6.239" + item.image
+            item.image = "https://preview.uniqcarttest.com" + item.image
           })
         } else {
           res.forEach((item) => {

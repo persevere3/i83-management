@@ -29,6 +29,7 @@ Table.getDataApi()
   .then((res) => {
     tableListData.value = res
     activeTable.value = tableListData.value.find((item) => item.id == Number(id))
+    console.log(activeTable.value)
     // tag
     const currentPath = route.path
     const view = visitedViews.value.find((item) => item.path === currentPath)
@@ -50,7 +51,7 @@ Table.getDataApi()
       <QRCodeVue3
         myclass="qrcode"
         v-if="activeTable && activeTable.number"
-        :value="`https://i83.vercel.app/?queryToken=${activeTable.orderToken}`"
+        :value="`https://i83.vercel.app/?tableId=${activeTable.id}`"
         :dotsOptions="{ type: 'classy' }"
       />
     </el-card>

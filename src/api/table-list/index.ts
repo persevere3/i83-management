@@ -1,4 +1,4 @@
-import { requestJson, requestGenerate } from "@/utils/service"
+import { requestJson } from "@/utils/service"
 import type * as Table from "./types/table"
 
 /** 增 */
@@ -28,9 +28,9 @@ export function updateDataApi(data: Table.UpdateReqData) {
   })
 }
 
-export function enableApi(tableId: number) {
-  return requestGenerate({
-    url: `/GenerateOrder/${tableId}`,
+export function enableApi(tableId: number, birthdayBonus: number) {
+  return requestJson({
+    url: `OrderInfos/GenerateOrder/${tableId}?tableId=${tableId}&birthdayBonus=${birthdayBonus}`,
     method: "get"
   })
 }

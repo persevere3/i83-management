@@ -127,7 +127,7 @@ const mealSalesList = computed(() => {
   orderList = orderList.filter((order: OrderReadData) => order.payStatus === 1)
 
   orderList = orderList.filter(
-    (order: OrderReadData) => activeStore.value === "全部分店" || order.storeName === activeStore.value
+    (order: OrderReadData) => activeStore.value?.id === 0 || order.storeName === activeStore.value?.storeName
   )
 
   const startTime = activeDateRange.value[0]
@@ -331,7 +331,8 @@ const pieOption = ref({
       <swiper :modules="modules" navigation :slides-per-view="5" :space-between="10">
         <swiper-slide v-for="meal in mealSalesList" :key="meal.id">
           <el-card :body-style="{ padding: 0 }">
-            <div class="mealImg" :style="{ 'background-image': `url(/img/meals/${meal.mealName}.jpg)` }">
+            <div class="mealImg">
+              <img :src="meal.image" alt="" srcset="" />
               <div class="mealText" style="padding: 10px">
                 <div class="rank" v-if="salesVolumeRank.indexOf(meal.salesVolume) > -1">
                   {{ salesVolumeRank.indexOf(meal.salesVolume) + 1 }}
@@ -387,11 +388,18 @@ const pieOption = ref({
 
 .mealImg {
   width: 100%;
-  padding-bottom: 100%;
+  padding-bottom: 120%;
   background-repeat: no-repeat;
   background-size: cover;
   background-position: center;
   position: relative;
+
+  img {
+    width: 80%;
+    position: absolute;
+    top: 10px;
+    left: 10%;
+  }
 
   .mealText {
     width: 80%;

@@ -1,10 +1,11 @@
 <script lang="ts" setup>
 import { ref, reactive, computed, watch } from "vue"
 
-import { type ReadData } from "@/api/select-list/types/select"
+import { type ReadData, type Option } from "@/api/select-list/types/select"
 import * as Select from "@/api/select-list/"
 
 import { storeToRefs } from "pinia"
+import { useCommonStore } from "@/store/modules/common"
 import { useSelectsStore } from "@/store/modules/selects"
 
 import { type FormInstance, type FormRules, type TableInstance, ElMessage, ElMessageBox } from "element-plus"
@@ -31,7 +32,7 @@ const currentUpdateId = ref<number>()
 const formRef = ref<FormInstance>()
 const formData = reactive<{
   name: string
-  optionList: string[]
+  optionList: Option[]
   relation: { [key: string]: number[] }
 }>({
   name: "",
@@ -43,7 +44,11 @@ const formRules: FormRules = reactive({
   optionList: [{ required: false, trigger: "blur", message: "請輸入選項" }]
 })
 const addFormDataOption = () => {
-  formData.optionList.push("")
+  formData.optionList.push({
+    title: "",
+    price: 0,
+    codeName: ""
+  })
 }
 
 const openDialog = (row?: ReadData) => {
@@ -63,7 +68,7 @@ const openDialog = (row?: ReadData) => {
 }
 
 const handleConfirm = () => {
-  formData.optionList = formData.optionList.filter((item) => item)
+  formData.optionList = formData.optionList.filter((item) => item.title)
 
   formRef.value?.validate((valid: boolean, fields) => {
     if (valid) {
@@ -81,7 +86,7 @@ const handleCreate = () => {
   Select.createDataApi({
     id: 0,
     title: formData.name,
-    optionList: JSON.stringify(formData.optionList),
+    optionList: formData.optionList,
     // relation: JSON.stringify(formData.relation),
     // 這兩個不需要
     max: 1,
@@ -133,10 +138,13 @@ const handleUpdate = () => {
   if (!currentUpdateId.value) return
   const select = selectListData.value.find((item) => item.id === currentUpdateId.value)
   if (!select) return
+  formData.optionList.forEach((item) => {
+    if (!item.codeName) item.codeName = ""
+  })
   Select.updateDataApi({
     id: currentUpdateId.value,
     title: formData.name,
-    optionList: JSON.stringify(formData.optionList),
+    optionList: formData.optionList,
     // relation: JSON.stringify(formData.relation),
     // 這兩個不需要
     max: select.max,
@@ -153,6 +161,8 @@ const handleUpdate = () => {
 //#endregion
 
 //#region 查
+const { role } = storeToRefs(useCommonStore())
+
 const { loading, selectListData } = storeToRefs(useSelectsStore())
 const { getSelectData } = useSelectsStore()
 getSelectData()
@@ -213,8 +223,10 @@ const pagefilterListData = computed<ReadData[]>(() => {
     <el-card v-loading="loading" shadow="never">
       <div class="toolbar-wrapper">
         <div>
-          <el-button type="primary" :icon="CirclePlus" @click="openDialog()">新增選擇</el-button>
-          <el-button type="danger" :icon="Delete" @click="handleDelete()">批量刪除</el-button>
+          <template v-if="role === 'super-admin'">
+            <el-button type="primary" :icon="CirclePlus" @click="openDialog()">新增選擇</el-button>
+            <el-button type="danger" :icon="Delete" @click="handleDelete()">批量刪除</el-button>
+          </template>
         </div>
         <div>
           <!-- <el-tooltip content="下载">
@@ -233,11 +245,12 @@ const pagefilterListData = computed<ReadData[]>(() => {
           <el-table-column label="選項" align="left">
             <template #default="scope">
               <span v-for="(item, index) in scope.row.optionList" :key="item"
-                >{{ index != 0 ? "，" : "" }} {{ item }}</span
-              >
+                >{{ index != 0 ? "，" : "" }} {{ item.title }}
+                <span v-if="item.optionPrice"> ({{ item.optionPrice }}) </span>
+              </span>
             </template>
           </el-table-column>
-          <el-table-column fixed="right" label="操作" width="150" align="center">
+          <el-table-column v-if="role === 'super-admin'" fixed="right" label="操作" width="150" align="center">
             <template #default="scope">
               <el-button type="primary" text bg size="small" @click="openDialog(scope.row)">修改</el-button>
               <el-button type="danger" text bg size="small" @click="handleDelete(scope.row)">删除</el-button>
@@ -264,14 +277,27 @@ const pagefilterListData = computed<ReadData[]>(() => {
         <el-form-item prop="name" label="選擇名稱">
           <el-input v-model="formData.name" placeholder="請輸入選擇名稱" />
         </el-form-item>
-        <el-form-item prop="" label="選項">
+        <el-form-item prop="" label="選項(價錢)">
           <template v-for="(item, index) in formData.optionList" :key="index">
             <div class="mb-2">
               <el-input
                 class="mealText"
-                v-model="formData.optionList[index]"
+                v-model="formData.optionList[index].title"
                 placeholder="請輸入選項"
-                style="width: 200px"
+                style="width: 50%"
+              />
+              <el-input
+                type="number"
+                class="mealText"
+                v-model="formData.optionList[index].price"
+                placeholder="請輸入價錢"
+                style="width: 50%"
+              />
+              <el-input
+                class="mealText"
+                v-model="formData.optionList[index].codeName"
+                placeholder="請輸入代號"
+                style="width: 50%"
               />
 
               <!-- <el-select
@@ -326,11 +352,11 @@ const pagefilterListData = computed<ReadData[]>(() => {
   justify-content: flex-end;
 }
 
-.el-form-item__content {
-  div + button {
-    margin-top: 5px;
-  }
-}
+// .el-form-item__content {
+//   div + button {
+//     margin-top: 5px;
+//   }
+// }
 
 .el-input__inner {
   width: 50%;

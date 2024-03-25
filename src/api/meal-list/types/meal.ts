@@ -12,10 +12,15 @@ export interface CreateReqData {
   selectList?: Select.MealSelectReadData[]
   price: number | undefined
   count?: string
+  mainMeal: boolean | undefined
   enable?: number
 }
 
-// UpdateReqData ?
+export interface UpdateEnableReqData {
+  productIds: number[]
+  storeId: number
+  changeType: number
+}
 
 export interface ReadData {
   id: number
@@ -27,7 +32,8 @@ export interface ReadData {
   selectList: Select.MealSelectReadData[]
   price: number
   count: string
-  enable: number
+  mainMeal: boolean | undefined
+  enable: number | undefined
 }
 
 export type ReadResData = ReadData[]

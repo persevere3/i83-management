@@ -7,6 +7,7 @@ import * as Meal from "@/api/meal-list"
 import * as Category from "@/api/category-list"
 
 import { storeToRefs } from "pinia"
+import { useCommonStore } from "@/store/modules/common"
 import { useMealsStore } from "@/store/modules/meals"
 import { useCategoriesStore } from "@/store/modules/categories"
 import { useSelectsStore } from "@/store/modules/selects"
@@ -31,6 +32,8 @@ const tableRef = ref<TableInstance>()
 
 //#region 新增/修改 dialog form
 const dialogVisible = ref<boolean>(false)
+const branchMealEnableDialogVisible = ref<boolean>(false)
+const branchMealEnable = ref<number>(1)
 
 const isBatchUpdate = ref(false)
 const currentUpdateId = ref<number>()
@@ -50,7 +53,7 @@ watch(activeSelectIdList, (newData, originData) => {
           return {
             id: item3.id,
             selectName: item3.title,
-            showOptionList: item3.optionList,
+            showOptionList: [],
             max: item3.max,
             min: item3.min
           }
@@ -70,6 +73,7 @@ const formData = reactive<Omit<CreateReqData, "id">>({
   selectList: [],
   price: undefined,
   count: "",
+  mainMeal: false,
   enable: 1
 })
 const formRules: any = reactive({
@@ -146,6 +150,7 @@ const openDialog = (row?: MealReadData, batchUpdate?: boolean) => {
 
     formData.price = row.price
     formData.count = row.count
+    formData.mainMeal = row.mainMeal
     formData.enable = row.enable
   } else {
     // 新增餐點 or 批量修改餐點
@@ -168,7 +173,14 @@ const openDialog = (row?: MealReadData, batchUpdate?: boolean) => {
 
     formData.price = undefined
     formData.count = ""
-    formData.enable = 1
+
+    if (!batchUpdate) {
+      formData.mainMeal = false
+      formData.enable = 1
+    } else {
+      formData.mainMeal = undefined
+      formData.enable = undefined
+    }
   }
   dialogVisible.value = true
 
@@ -177,6 +189,12 @@ const openDialog = (row?: MealReadData, batchUpdate?: boolean) => {
     input?.removeEventListener("input", inputHandler)
     input?.addEventListener("input", inputHandler)
   })
+}
+const openBranchMealEnableDialog = () => {
+  const selections = tableRef.value?.getSelectionRows()
+  if (!selections.length) return
+  branchMealEnable.value = 1
+  branchMealEnableDialogVisible.value = true
 }
 
 const addFormDataMealText = () => {
@@ -287,7 +305,7 @@ const handleUpdate = () => {
   // 改圖   => file: (binary)，後端覆蓋原本的image(base64)
   // 不改圖 => file: 1，後端維持原本的image
   if (process.env.NODE_ENV === "development") {
-    updateFormData.image = image.value.replace("http://192.168.6.239", "")
+    updateFormData.image = image.value.replace("https://preview.uniqcarttest.com", "")
   } else {
     updateFormData.image = image.value.replace("https://preview.uniqcarttest.com", "")
     // updateFormData.image = image.value
@@ -315,7 +333,7 @@ const handleBatchUpdate = () => {
   newBatchMeal.forEach((item: any) => {
     delete item.category
     if (process.env.NODE_ENV === "development") {
-      item.image = item.image.replace("http://192.168.6.239", "")
+      item.image = item.image.replace("https://preview.uniqcarttest.com", "")
     } else {
       item.image = item.image.replace("https://preview.uniqcarttest.com", "")
     }
@@ -332,7 +350,9 @@ const handleBatchUpdate = () => {
     item.origin = isFormdataReset.origin ? "" : formData.origin ? formData.origin : item.origin
     item.price = formData.price ? formData.price : item.price
     item.count = isFormdataReset.count ? "" : formData.count ? formData.count : item.count
-    item.enable = formData.enable
+
+    item.mainMeal = formData.mainMeal === undefined ? item.mainMeal : formData.mainMeal
+    item.enable = formData.enable === undefined ? item.enable : formData.enable
   })
 
   Meal.updateDataApi(
@@ -351,13 +371,13 @@ const handleBatchUpdate = () => {
     })
 }
 
-const changeEnable = (id: number) => {
+const changeMealEnable = (id: number) => {
   if (!id) return
   const meal = mealListData.value.find((item) => item.id === id)
   if (!meal) return
 
   const newEnableText = meal.enable ? "關閉" : "開啟"
-  const text = `${newEnableText}${meal.mealName}，確認${newEnableText}？`
+  const text = `${newEnableText}餐點: ${meal.mealName}，確認${newEnableText}？`
 
   ElMessageBox.confirm(text, "提示", {
     confirmButtonText: "確定",
@@ -368,7 +388,7 @@ const changeEnable = (id: number) => {
     newMeal.enable = !newMeal.enable
 
     if (process.env.NODE_ENV === "development") {
-      newMeal.image = newMeal.image.replace("http://192.168.6.239", "")
+      newMeal.image = newMeal.image.replace("https://preview.uniqcarttest.com", "")
     } else {
       newMeal.image = newMeal.image.replace("https://preview.uniqcarttest.com", "")
     }
@@ -385,9 +405,52 @@ const changeEnable = (id: number) => {
     })
   })
 }
+const changeBranchMealEnable = (id?: number) => {
+  let newEnableText = ""
+  let newEnable = 1
+  let text = ""
+  let ids: number[] = []
+
+  if (id) {
+    const meal = mealListData.value.find((item) => item.id === id)
+    if (!meal) return
+    newEnable = meal.enable ? 0 : 1
+    newEnableText = newEnable ? "開啟" : "關閉"
+    text = `${newEnableText}分店餐點: ${meal.mealName}，確認${newEnableText}？`
+    ids = [id]
+  } else {
+    const selections = tableRef.value?.getSelectionRows()
+    if (!selections.length) return
+    newEnable = branchMealEnable.value
+    newEnableText = newEnable ? "開啟" : "關閉"
+    text = `批量${newEnableText}分店餐點，確認${newEnableText}？`
+    ids = selections.map((item: any) => item.id)
+  }
+
+  ElMessageBox.confirm(text, "提示", {
+    confirmButtonText: "確定",
+    cancelButtonText: "取消",
+    type: "warning"
+  }).then(() => {
+    Meal.updateBranchEnableApi({
+      productIds: ids,
+      storeId: activeStore.value.id,
+      changeType: newEnable ? 1 : 0
+    })
+      .then(() => {
+        ElMessage.success(`${newEnableText}成功`)
+        resetData()
+      })
+      .finally(() => {
+        branchMealEnableDialogVisible.value = false
+      })
+  })
+}
 //#endregion
 
 //#region 查
+const { role, activeStore } = storeToRefs(useCommonStore())
+
 const { loading, mealListData } = storeToRefs(useMealsStore())
 const { getMealData } = useMealsStore()
 getMealData()
@@ -413,6 +476,10 @@ const resetData = () => {
   getMealData()
   getCategoryData()
 }
+
+watch(activeStore, () => {
+  resetData()
+})
 
 const { selectListData } = storeToRefs(useSelectsStore())
 const { getSelectData } = useSelectsStore()
@@ -477,9 +544,14 @@ const pagefilterListData = computed<MealReadData[]>(() => {
     <el-card v-loading="loading" shadow="never">
       <div class="toolbar-wrapper">
         <div>
-          <el-button type="primary" :icon="CirclePlus" @click="openDialog()">新增餐點</el-button>
-          <el-button type="warning" :icon="CirclePlus" @click="openDialog(undefined, true)">批量修改餐點</el-button>
-          <el-button type="danger" :icon="Delete" @click="handleDelete()">批量刪除</el-button>
+          <template v-if="role === 'super-admin'">
+            <el-button type="primary" :icon="CirclePlus" @click="openDialog()">新增餐點</el-button>
+            <el-button type="warning" :icon="CirclePlus" @click="openDialog(undefined, true)">批量修改餐點</el-button>
+            <el-button type="danger" :icon="Delete" @click="handleDelete()">批量刪除</el-button>
+          </template>
+          <template v-else>
+            <el-button type="warning" :icon="CirclePlus" @click="openBranchMealEnableDialog">批量修改狀態</el-button>
+          </template>
         </div>
         <div>
           <!-- <el-tooltip content="下载">
@@ -535,7 +607,11 @@ const pagefilterListData = computed<MealReadData[]>(() => {
           <!-- <el-table-column label="數量" width="100" align="center">
             <template #default="scope"> {{ scope.row.count }} </template>
           </el-table-column> -->
-          <el-table-column prop="status" label="狀態" width="80" align="center">
+          <el-table-column prop="status" width="100" align="center">
+            <template #header>
+              <div v-if="activeStore?.id !== 0">{{ activeStore?.storeName }}</div>
+              <div>餐點狀態</div>
+            </template>
             <template #default="scope">
               <el-tag v-if="scope.row.enable" type="success" effect="plain">開啟</el-tag>
               <el-tag v-else type="danger" effect="plain">關閉</el-tag>
@@ -544,11 +620,11 @@ const pagefilterListData = computed<MealReadData[]>(() => {
                 style="--el-switch-on-color: var(--el-color-success); --el-switch-off-color: var(--el-color-danger)"
                 :active-value="1"
                 :inactive-value="0"
-                @click="changeEnable(scope.row.id)"
+                @click="activeStore?.id === 0 ? changeMealEnable(scope.row.id) : changeBranchMealEnable(scope.row.id)"
               />
             </template>
           </el-table-column>
-          <el-table-column fixed="right" label="操作" width="80" align="center">
+          <el-table-column v-if="role === 'super-admin'" fixed="right" label="操作" width="80" align="center">
             <template #default="scope">
               <el-button type="primary" text bg size="small" @click="openDialog(scope.row)">修改</el-button>
               <el-button type="danger" text bg size="small" @click="handleDelete(scope.row)">删除</el-button>
@@ -664,9 +740,11 @@ const pagefilterListData = computed<MealReadData[]>(() => {
             <el-checkbox-group :disabled="isFormdataReset.selectList" v-model="item.showOptionList">
               <el-checkbox
                 v-for="option in selectListData.find((select) => select.id === item.id)?.optionList"
-                :key="option"
+                :key="option.title"
                 :label="option"
-              />
+              >
+                {{ option.title }}
+              </el-checkbox>
             </el-checkbox-group>
             <div class="mt-3">
               最少選擇
@@ -675,7 +753,7 @@ const pagefilterListData = computed<MealReadData[]>(() => {
                 class="mx-1"
                 v-model="item.min"
                 :min="0"
-                :max="item.max"
+                :max="item.showOptionList.length"
               />
               項
             </div>
@@ -685,7 +763,7 @@ const pagefilterListData = computed<MealReadData[]>(() => {
                 :disabled="isFormdataReset.selectList"
                 class="mx-1"
                 v-model="item.max"
-                :min="1"
+                :min="0"
                 :max="item.showOptionList.length"
               />
               項
@@ -699,6 +777,12 @@ const pagefilterListData = computed<MealReadData[]>(() => {
           <el-switch v-if="isBatchUpdate" v-model="isFormdataReset.count" inactive-text="清除" />
           <el-input :disabled="isFormdataReset.count" type="number" v-model="formData.count" placeholder="請輸入數量" />
         </el-form-item> -->
+        <el-form-item prop="mainMeal" label="是否為主餐">
+          <el-select v-model="formData.mainMeal" placeholder="是否為主餐" style="width: 100%">
+            <el-option label="是" :value="true" />
+            <el-option label="否" :value="false" />
+          </el-select>
+        </el-form-item>
         <el-form-item prop="enable" label="狀態">
           <el-select v-model="formData.enable" placeholder="狀態" style="width: 100%">
             <el-option label="開啟" :value="1" />
@@ -709,6 +793,18 @@ const pagefilterListData = computed<MealReadData[]>(() => {
       <template #footer>
         <el-button @click="dialogVisible = false">取消</el-button>
         <el-button type="primary" @click="handleConfirm()">確認</el-button>
+      </template>
+    </el-dialog>
+
+    <!-- 批量修改狀態 -->
+    <el-dialog v-model="branchMealEnableDialogVisible" title="批量修改分店餐點狀態" width="35%">
+      <el-select v-model="branchMealEnable" placeholder="狀態" style="width: 100%">
+        <el-option label="開啟" :value="1" />
+        <el-option label="關閉" :value="0" />
+      </el-select>
+      <template #footer>
+        <el-button @click="branchMealEnableDialogVisible = false">取消</el-button>
+        <el-button type="primary" @click="changeBranchMealEnable()">確認</el-button>
       </template>
     </el-dialog>
   </div>
