@@ -23,7 +23,7 @@ export interface UpdateReqData {
 export interface MealSelectReadData {
   id: number
   selectName: string
-  showOptionList: Option[]
+  showOptionList: any
   max: number
   min: number
 }

@@ -167,6 +167,7 @@ const addTableData = () => {
     id: "",
     mealName: "",
     price: 0,
+    originPrice: 0,
     count: "1",
     selectList: [],
     note: ""

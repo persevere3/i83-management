@@ -35,13 +35,13 @@ const formData = reactive<{
   passWord: string
   enable: number
   permissions: number
-  storeId: number | null
+  storeId: number | undefined
 }>({
   account: "",
   passWord: "",
   enable: 1,
   permissions: 1,
-  storeId: null
+  storeId: undefined
 })
 const formRules: FormRules = reactive({
   account: [{ required: true, trigger: "blur", message: "請輸入帳號" }]
@@ -86,7 +86,7 @@ const openDialog = (row?: ReadData) => {
     formData.passWord = ""
     formData.enable = 1
     formData.permissions = 1
-    formData.storeId = null
+    formData.storeId = undefined
   }
   dialogVisible.value = true
 }
@@ -179,7 +179,7 @@ const changeEnable = (id: number) => {
       id,
       enable: newAccount.enable ? 0 : 1,
       permissions: newAccount.permissions,
-      storeId: newAccount.permissions > 0 ? newAccount.store[0].id : null
+      storeId: newAccount.permissions > 0 ? newAccount.store[0].id : undefined
     }
     Account.updateDataApi(postData).then(() => {
       ElMessage.success(`${newEnableText}成功`)

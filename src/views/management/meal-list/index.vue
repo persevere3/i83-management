@@ -432,6 +432,7 @@ const changeBranchMealEnable = (id?: number) => {
     cancelButtonText: "取消",
     type: "warning"
   }).then(() => {
+    if (!activeStore.value) return
     Meal.updateBranchEnableApi({
       productIds: ids,
       storeId: activeStore.value.id,

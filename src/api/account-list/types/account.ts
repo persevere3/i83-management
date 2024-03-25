@@ -5,7 +5,7 @@ export interface CreateReqData {
   passWord: string
   enable: number
   permissions: number
-  storeId: number | null
+  storeId: number | undefined
 }
 
 export interface UpdateReqData {
@@ -13,7 +13,7 @@ export interface UpdateReqData {
   passWord?: string
   enable: number
   permissions: number
-  storeId: number | null
+  storeId: number | undefined
 }
 
 export interface ReadData {
