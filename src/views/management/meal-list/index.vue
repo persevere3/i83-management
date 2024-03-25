@@ -304,12 +304,7 @@ const handleUpdate = () => {
   updateFormData.id = currentUpdateId.value
   // 改圖   => file: (binary)，後端覆蓋原本的image(base64)
   // 不改圖 => file: 1，後端維持原本的image
-  if (process.env.NODE_ENV === "development") {
-    updateFormData.image = image.value.replace("https://preview.uniqcarttest.com", "")
-  } else {
-    updateFormData.image = image.value.replace("https://preview.uniqcarttest.com", "")
-    // updateFormData.image = image.value
-  }
+  updateFormData.image = image.value.replace("https://preview.uniqcarttest.com", "")
   delete updateFormData.categorys
   delete updateFormData.file
 
@@ -332,11 +327,7 @@ const handleBatchUpdate = () => {
   const newBatchMeal = JSON.parse(JSON.stringify(batchMeals.value))
   newBatchMeal.forEach((item: any) => {
     delete item.category
-    if (process.env.NODE_ENV === "development") {
-      item.image = item.image.replace("https://preview.uniqcarttest.com", "")
-    } else {
-      item.image = item.image.replace("https://preview.uniqcarttest.com", "")
-    }
+    item.image = item.image.replace("https://preview.uniqcarttest.com", "")
     item.mealTextList = isFormdataReset.mealTextList
       ? []
       : formData.mealTextList?.length
@@ -387,11 +378,7 @@ const changeMealEnable = (id: number) => {
     const newMeal = JSON.parse(JSON.stringify(meal))
     newMeal.enable = !newMeal.enable
 
-    if (process.env.NODE_ENV === "development") {
-      newMeal.image = newMeal.image.replace("https://preview.uniqcarttest.com", "")
-    } else {
-      newMeal.image = newMeal.image.replace("https://preview.uniqcarttest.com", "")
-    }
+    newMeal.image = newMeal.image.replace("https://preview.uniqcarttest.com", "")
 
     Meal.updateDataApi(
       objToFormData({

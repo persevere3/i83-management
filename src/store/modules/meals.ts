@@ -32,15 +32,9 @@ export const useMealsStore = defineStore("meals", () => {
     loading.value = true
     Meal.getDataApi()
       .then((res) => {
-        if (process.env.NODE_ENV === "development") {
-          res.forEach((item) => {
-            item.image = "https://preview.uniqcarttest.com" + item.image
-          })
-        } else {
-          res.forEach((item) => {
-            item.image = "https://preview.uniqcarttest.com" + item.image
-          })
-        }
+        res.forEach((item) => {
+          item.image = "https://preview.uniqcarttest.com" + item.image
+        })
         mealListData.value = res
 
         const f = false
