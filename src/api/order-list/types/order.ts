@@ -36,6 +36,7 @@ export interface ReadData {
   payMethod: string
   birthdayBonus: number
   total: number
+  orderStatus: number
   orderTime: string
   payOrderId: string
   payStatus: number

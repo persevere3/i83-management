@@ -6,8 +6,7 @@ export default function useWebSocket(
   cancelOrderNotification: any
 ) {
   const isDevelopment = process.env.NODE_ENV === "development"
-  const url = isDevelopment ? "/ws/orderhub" : "https://preview.uniqcarttest.com/SteakHouseApi/orderhub"
-
+  const url = isDevelopment ? "/ws/orderhub" : "/orderhub"
   // 建立SignalR連接
   const connection = new signalR.HubConnectionBuilder()
     .withUrl(url)

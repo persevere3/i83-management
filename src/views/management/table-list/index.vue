@@ -84,7 +84,8 @@ const handleCreate = () => {
     id: 0,
     storeName: formData.storeName,
     number: formData.number,
-    orderToken: undefined,
+    orderToken: "",
+    birthdayBonus: 0,
     enable: 0
   })
     .then(() => {

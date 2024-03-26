@@ -3,6 +3,7 @@ export interface CreateReqData {
   storeName: string
   number: string
   orderToken?: string
+  birthdayBonus: number
   enable: number
 }
 
