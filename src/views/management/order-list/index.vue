@@ -331,6 +331,8 @@ const orderStatusArr = [
   }
 ]
 
+const activeOrderStatus = ref<number>(-1)
+
 const delVisitedView = () => {
   const index = visitedViews.value.findIndex((v) => v.path === route.path)
   if (index !== -1) visitedViews.value.splice(index, 1)
@@ -476,6 +478,7 @@ const filterListData = computed<ReadData[]>(() => {
   return orderList
     .filter((item) => item.orderId.indexOf(searchData.orderId) > -1)
     .filter((item) => activeStore.value?.id === 0 || item.storeName === activeStore.value?.storeName)
+    .filter((item) => activeOrderStatus.value === -1 || item.orderStatus === activeOrderStatus.value)
 })
 watch(
   filterListData,
@@ -567,6 +570,22 @@ watch(pagefilterListData, () => {
           <el-tooltip content="刷新當前頁">
             <el-button type="primary" :icon="RefreshRight" circle @click="getOrderData" />
           </el-tooltip>
+        </div>
+      </div>
+      <div class="toolbar-wrapper">
+        <div>
+          <el-button :type="activeOrderStatus === -1 ? 'success' : 'info'" @click="activeOrderStatus = -1">
+            全部
+          </el-button>
+          <el-button
+            v-for="(item, index) in orderStatusArr"
+            v-show="['branch-backstage'].includes(role) ? index === 1 || index === 2 : true"
+            :key="item.label"
+            :type="index === activeOrderStatus ? 'success' : 'info'"
+            @click="activeOrderStatus = index"
+          >
+            {{ item.label }}
+          </el-button>
         </div>
       </div>
       <div class="table-wrapper">
