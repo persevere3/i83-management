@@ -283,9 +283,10 @@ const pagefilterListData = computed<ReadData[]>(() => {
         <el-table ref="tableRef" :data="pagefilterListData" row-key="id">
           <!-- <el-table-column type="selection" width="50" align="center" /> -->
           <el-table-column prop="account" label="帳號" align="center" />
-          <el-table-column label="權限" align="center">
+          <el-table-column label="權限 / 分店" align="center">
             <template #default="scope">
-              {{ roleList[scope.row.permissions] }}
+              <div>{{ roleList[scope.row.permissions] }}</div>
+              <div v-if="scope.row.store.length < 2">{{ scope.row.store[0].storeName }}</div>
             </template>
           </el-table-column>
           <el-table-column prop="status" label="狀態" width="100" align="center">

@@ -277,7 +277,7 @@ const pagefilterListData = computed<ReadData[]>(() => {
         <el-form-item prop="name" label="選擇名稱">
           <el-input v-model="formData.name" placeholder="請輸入選擇名稱" />
         </el-form-item>
-        <el-form-item prop="" label="選項(價錢)">
+        <el-form-item prop="" label="選項(價錢)(代號)">
           <template v-for="(item, index) in formData.optionList" :key="index">
             <div class="mb-2">
               <el-input

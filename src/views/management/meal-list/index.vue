@@ -230,6 +230,7 @@ const objToFormData = (obj: { [propName: string]: any }) => {
 
 //#region 增
 const handleCreate = () => {
+  console.log(formData)
   Meal.createDataApi(
     objToFormData({
       id: 0,
@@ -573,7 +574,11 @@ const pagefilterListData = computed<MealReadData[]>(() => {
               </div>
             </template>
           </el-table-column>
-          <el-table-column label="餐點名稱 / 肉品來源" width="150" align="center">
+          <el-table-column width="150" align="center">
+            <template #header>
+              <div>餐點名稱</div>
+              <div>肉品來源</div>
+            </template>
             <template #default="scope">
               <div>{{ scope.row.mealName }}</div>
               <div>{{ scope.row.origin }}</div>
