@@ -37,65 +37,72 @@ const { thousandsSeparatorFormat } = useNumberFormat()
 
 // #region 日期
 // 快捷鍵
-const shortcuts = [
-  {
-    text: "Last 1 day",
-    value: () => {
-      const start = new Date()
-      const end = new Date()
-      start.setTime(start.getTime() - 3600 * 1000 * 24 * 1)
-      return [start, end]
-    }
-  },
-  {
-    text: "Last 7 days",
-    value: () => {
-      const end = new Date()
-      const start = new Date()
-      start.setTime(start.getTime() - 3600 * 1000 * 24 * 7)
-      return [start, end]
-    }
-  },
-  {
-    text: "Last 30 days",
-    value: () => {
-      const end = new Date()
-      const start = new Date()
-      start.setTime(start.getTime() - 3600 * 1000 * 24 * 30)
-      return [start, end]
-    }
-  },
-  {
-    text: "Last 90 days",
-    value: () => {
-      const end = new Date()
-      const start = new Date()
-      start.setTime(start.getTime() - 3600 * 1000 * 24 * 90)
-      return [start, end]
-    }
-  },
-  {
-    text: "Last 180 days",
-    value: () => {
-      const end = new Date()
-      const start = new Date()
-      start.setTime(start.getTime() - 3600 * 1000 * 24 * 180)
-      return [start, end]
-    }
-  },
-  {
-    text: "Last 360 days",
-    value: () => {
-      const end = new Date()
-      const start = new Date()
-      start.setTime(start.getTime() - 3600 * 1000 * 24 * 365)
-      return [start, end]
-    }
-  }
-]
-
+const shortcuts = ref<{ text: string; value: Function }[]>([])
 const activeDateRange = ref<any>([])
-activeDateRange.value = shortcuts[1].value()
+
+const resetShortcuts = () => {
+  shortcuts.value = [
+    {
+      text: "Last 1 day",
+      value: () => {
+        const end = new Date()
+        const start = new Date()
+        start.setTime(start.getTime() - 3600 * 1000 * 24 * 1)
+        return [start, end]
+      }
+    },
+    {
+      text: "Last 7 days",
+      value: () => {
+        const end = new Date()
+        const start = new Date()
+        start.setTime(start.getTime() - 3600 * 1000 * 24 * 7)
+        return [start, end]
+      }
+    },
+    {
+      text: "Last 30 days",
+      value: () => {
+        const end = new Date()
+        const start = new Date()
+        start.setTime(start.getTime() - 3600 * 1000 * 24 * 30)
+        return [start, end]
+      }
+    },
+    {
+      text: "Last 90 days",
+      value: () => {
+        const end = new Date()
+        const start = new Date()
+        start.setTime(start.getTime() - 3600 * 1000 * 24 * 90)
+        return [start, end]
+      }
+    },
+    {
+      text: "Last 180 days",
+      value: () => {
+        const end = new Date()
+        const start = new Date()
+        start.setTime(start.getTime() - 3600 * 1000 * 24 * 180)
+        return [start, end]
+      }
+    },
+    {
+      text: "Last 360 days",
+      value: () => {
+        const end = new Date()
+        const start = new Date()
+        start.setTime(start.getTime() - 3600 * 1000 * 24 * 365)
+        return [start, end]
+      }
+    }
+  ]
+
+  console.log(shortcuts.value)
+  activeDateRange.value = shortcuts.value[1].value()
+  console.log(activeDateRange.value)
+}
+resetShortcuts()
 
 const resetDateSearch = () => {
   activeDateRange.value = []
@@ -468,11 +475,12 @@ const resetSearch = () => {
 const filterListData = computed<ReadData[]>(() => {
   const [startTime, endTime] = activeDateRange.value
   let orderList: ReadData[] = JSON.parse(JSON.stringify(orderListData.value))
-  if (startTime && endTime) {
-    orderList = orderList.filter((order: ReadData) => {
-      const createTime = new Date(order.orderTime)
-      return createTime >= startTime && createTime <= endTime
-    })
+  if (startTime) {
+    if (endTime)
+      orderList = orderList.filter((order: ReadData) => {
+        const createTime = new Date(order.orderTime)
+        return createTime >= startTime && createTime <= endTime
+      })
   }
 
   return orderList
@@ -568,7 +576,7 @@ watch(pagefilterListData, () => {
             <el-button type="primary" :icon="Download" circle />
           </el-tooltip> -->
           <el-tooltip content="刷新當前頁">
-            <el-button type="primary" :icon="RefreshRight" circle @click="getOrderData" />
+            <el-button type="primary" :icon="RefreshRight" circle @click="getOrderData, resetShortcuts" />
           </el-tooltip>
         </div>
       </div>

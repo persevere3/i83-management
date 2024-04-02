@@ -17,14 +17,20 @@ export const useOrdersStore = defineStore("orders", () => {
 
   const receiveOrderNotification = (res: any) => {
     console.log("收到新訂單通知:")
+    console.log(res)
     res.mealList = handleMealListRes(res.mealList)
     res.orderTime = formatDateTime(res.orderTime)
     res.payTime = formatDateTime(res.payTime)
 
-    orderListData.value.unshift(JSON.parse(JSON.stringify(res)))
+    if (["super-admin", "branch-admin"].includes(role.value)) {
+      orderListData.value.unshift(JSON.parse(JSON.stringify(res)))
+    } else if (["branch-backstage"].includes(role.value)) {
+      orderListData.value.push(JSON.parse(JSON.stringify(res)))
+    }
   }
   const cancelOrderNotification = (res: any) => {
     console.log("取消訂單通知:")
+    console.log(res)
     const index = orderListData.value.findIndex((item) => item.orderId === res.orderId)
     if (index > -1) orderListData.value.splice(index, 1)
   }
@@ -67,11 +73,13 @@ export const useOrdersStore = defineStore("orders", () => {
   }
 
   const handleOrderListRes = (res: any) => {
-    res.sort((a: any, b: any) => {
-      const dateA = new Date(a.orderTime)
-      const dateB = new Date(b.orderTime)
-      return dateB.getTime() - dateA.getTime()
-    })
+    if (["super-admin", "branch-admin"].includes(role.value)) {
+      res.sort((a: any, b: any) => {
+        const dateA = new Date(a.orderTime)
+        const dateB = new Date(b.orderTime)
+        return dateB.getTime() - dateA.getTime()
+      })
+    }
     res.forEach((item: any) => {
       item.mealList = handleMealListRes(item.mealList)
       item.orderTime = formatDateTime(item.orderTime)
@@ -81,7 +89,7 @@ export const useOrdersStore = defineStore("orders", () => {
   }
 
   const getOrderData = () => {
-    const api = role.value === "branch-backstage" ? Order.getBackstageDataApi : Order.getDataApi
+    const api = ["super-admin", "branch-admin"].includes(role.value) ? Order.getDataApi : Order.getBackstageDataApi
     api()
       .then((res) => {
         orderListData.value = handleOrderListRes(res)
