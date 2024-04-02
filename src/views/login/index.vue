@@ -8,9 +8,6 @@ import { User, Lock } from "@element-plus/icons-vue"
 import { type LoginRequestData } from "@/api/login/types/login"
 import ThemeSwitch from "@/components/ThemeSwitch/index.vue"
 
-import { storeToRefs } from "pinia"
-import { useCommonStore } from "@/store/modules/common"
-
 const router = useRouter()
 
 /** 登录表单元素的引用 */
@@ -40,9 +37,7 @@ const handleLogin = () => {
       useUserStore()
         .login(loginFormData)
         .then(() => {
-          const { role } = storeToRefs(useCommonStore())
-          if (role.value === "branch-backstage") router.push({ path: "/order-list" })
-          else router.push({ path: "/" })
+          router.push({ path: "/" })
         })
         .catch(() => {
           // createCode()

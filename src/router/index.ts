@@ -60,15 +60,15 @@ export const asyncRoutes: RouteRecordRaw[] = [
   {
     path: "/",
     component: Layouts,
-    redirect: "/dashboard",
+    name: "Dashboard",
     meta: {
       roles: ["super-admin", "branch-admin"]
     },
+    redirect: "/dashboard",
     children: [
       {
-        path: "dashboard",
+        path: "/dashboard",
         component: () => import("@/views/dashboard/index.vue"),
-        name: "Dashboard",
         meta: {
           title: "銷售報表",
           svgIcon: "dashboard"
@@ -76,17 +76,30 @@ export const asyncRoutes: RouteRecordRaw[] = [
       }
     ]
   },
-  // account
   {
     path: "/",
+    name: "Backstage",
+    meta: {
+      roles: ["branch-backstage"]
+    },
+    redirect: "/backstage",
+    children: [
+      {
+        path: "/backstage",
+        component: () => import("@/views/backstage/index.vue")
+      }
+    ]
+  },
+  // account
+  {
+    path: "/account-list",
     component: Layouts,
-    redirect: "/account-list",
     meta: {
       roles: ["super-admin"]
     },
     children: [
       {
-        path: "account-list",
+        path: "",
         component: () => import("@/views/management/account-list/index.vue"),
         name: "AccountList",
         meta: {
@@ -98,15 +111,14 @@ export const asyncRoutes: RouteRecordRaw[] = [
   },
   // store
   {
-    path: "/",
+    path: "/store-list",
     component: Layouts,
-    redirect: "/store-list",
     meta: {
       roles: ["super-admin"]
     },
     children: [
       {
-        path: "store-list",
+        path: "",
         component: () => import("@/views/management/store-list/index.vue"),
         name: "StoreList",
         meta: {
@@ -118,15 +130,14 @@ export const asyncRoutes: RouteRecordRaw[] = [
   },
   // pay method
   {
-    path: "/",
+    path: "/payMethod",
     component: Layouts,
-    redirect: "/payMethod",
     meta: {
       roles: ["super-admin"]
     },
     children: [
       {
-        path: "payMethod",
+        path: "",
         component: () => import("@/views/management/payMethod/index.vue"),
         name: "PayMethod",
         meta: {
@@ -138,15 +149,14 @@ export const asyncRoutes: RouteRecordRaw[] = [
   },
   // category
   {
-    path: "/",
+    path: "/category-list",
     component: Layouts,
-    redirect: "/category-list",
     meta: {
       roles: ["super-admin"]
     },
     children: [
       {
-        path: "category-list",
+        path: "",
         component: () => import("@/views/management/category-list/index.vue"),
         name: "CategoryList",
         meta: {
@@ -159,15 +169,14 @@ export const asyncRoutes: RouteRecordRaw[] = [
   },
   // select
   {
-    path: "/",
+    path: "/select-list",
     component: Layouts,
-    redirect: "/select-list",
     meta: {
       roles: ["super-admin"]
     },
     children: [
       {
-        path: "select-list",
+        path: "",
         component: () => import("@/views/management/select-list/index.vue"),
         name: "SelectList",
         meta: {
@@ -180,15 +189,14 @@ export const asyncRoutes: RouteRecordRaw[] = [
   },
   // meal
   {
-    path: "/",
+    path: "/meal-list",
     component: Layouts,
-    redirect: "/meal-list",
     meta: {
       roles: ["super-admin", "branch-admin"]
     },
     children: [
       {
-        path: "meal-list",
+        path: "",
         component: () => import("@/views/management/meal-list/index.vue"),
         name: "MealList",
         meta: {
@@ -201,15 +209,14 @@ export const asyncRoutes: RouteRecordRaw[] = [
   },
   // table
   {
-    path: "/",
+    path: "/table-list",
     component: Layouts,
-    redirect: "/table-list",
     meta: {
       roles: ["super-admin", "branch-admin"]
     },
     children: [
       {
-        path: "table-list",
+        path: "",
         component: () => import("@/views/management/table-list/index.vue"),
         name: "TabletList",
         meta: {
@@ -222,12 +229,14 @@ export const asyncRoutes: RouteRecordRaw[] = [
   },
   // order
   {
-    path: "/",
+    path: "/order-list",
     component: Layouts,
-    redirect: "/order-list",
+    meta: {
+      roles: ["super-admin", "branch-admin"]
+    },
     children: [
       {
-        path: "order-list",
+        path: "",
         component: () => import("@/views/management/order-list/index.vue"),
         name: "OrdertList",
         meta: {
@@ -239,15 +248,14 @@ export const asyncRoutes: RouteRecordRaw[] = [
   },
   // customer
   {
-    path: "/",
+    path: "/customer/:id",
     component: Layouts,
-    redirect: "/customer/:id",
     meta: {
       hidden: true
     },
     children: [
       {
-        path: "customer/:id",
+        path: "",
         component: () => import("@/views/customer/index.vue"),
         name: "Customer"
       }
