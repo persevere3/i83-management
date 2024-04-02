@@ -27,6 +27,13 @@ const lineMethod = ref<ReadData>({
   payKey: "",
   enabled: false
 })
+const jkoMethod = ref<ReadData>({
+  id: 0,
+  channel: 0,
+  payId: "",
+  payKey: "",
+  enabled: false
+})
 
 const getChannels = () => {
   PayMethod.getDataApi().then((res) => {
@@ -37,6 +44,9 @@ const getChannels = () => {
 
     const line = res.find((item) => item.channel === 1)
     if (line) lineMethod.value = JSON.parse(JSON.stringify(line))
+
+    const jko = res.find((item) => item.channel === 2)
+    if (jko) jkoMethod.value = JSON.parse(JSON.stringify(jko))
   })
 }
 getChannels()
@@ -86,6 +96,26 @@ const updateChannel = (channel: ReadData) => {
       </el-form>
 
       <el-button @click="updateChannel(lineMethod)"> 確認 </el-button>
+    </el-card>
+
+    <el-card>
+      <div class="enable">
+        <div class="img">
+          <img src="../../../assets/img/jko.png" alt="" />
+        </div>
+        <el-switch v-model="jkoMethod.enabled" />
+      </div>
+
+      <el-form v-if="jkoMethod?.enabled" :model="jkoMethod" label-width="150px" label-position="left">
+        <el-form-item label="Channel ID">
+          <el-input v-model="jkoMethod.payId" placeholder="請輸入Channel ID" />
+        </el-form-item>
+        <el-form-item label="Channel Secret Key">
+          <el-input v-model="jkoMethod.payKey" placeholder="請輸入Channel Secret Key" />
+        </el-form-item>
+      </el-form>
+
+      <el-button @click="updateChannel(jkoMethod)"> 確認 </el-button>
     </el-card>
   </div>
 </template>
