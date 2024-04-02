@@ -125,7 +125,7 @@ function createRequest(service: AxiosInstance) {
 export const request = createRequest(service)
 
 // 客製 ==================================================
-const baseURL = process.env.NODE_ENV === "development" ? "/api" : "https://preview.uniqcarttest.com/api"
+const baseURL = process.env.NODE_ENV === "development" ? "/myapp/api" : "/myapp/api"
 
 function createRequestFormData(service: AxiosInstance) {
   return function <T>(config: AxiosRequestConfig): Promise<T> {

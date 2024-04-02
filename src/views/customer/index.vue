@@ -51,7 +51,7 @@ Table.getDataApi()
       <QRCodeVue3
         myclass="qrcode"
         v-if="activeTable && activeTable.number"
-        :value="`https://i83.vercel.app/?tableId=${activeTable.id}`"
+        :value="`https://preview.uniqcarttest.com/?tableId=${activeTable.id}`"
         :dotsOptions="{ type: 'classy' }"
       />
     </el-card>

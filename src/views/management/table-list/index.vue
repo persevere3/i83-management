@@ -378,11 +378,10 @@ const pagefilterListData = computed<ReadData[]>(() => {
                   myclass="qrcode"
                   :width="60"
                   :height="60"
-                  :value="`https://i83.vercel.app/?tableId=${scope.row?.id}`"
+                  :value="`https://preview.uniqcarttest.com/?tableId=${scope.row?.id}`"
                   :dotsOptions="{ type: 'classy' }"
                 />
               </router-link>
-              <div v-if="scope.row.orderToken">http://localhost:3000/?tableId={{ scope.row.id }}</div>
             </template>
           </el-table-column>
           <el-table-column prop="status" label="狀態" width="120" align="center">

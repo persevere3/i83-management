@@ -36,13 +36,13 @@ export default (configEnv: ConfigEnv): UserConfigExport => {
       strictPort: false,
       /** 接口代理 */
       proxy: {
-        "/api": {
+        "/myapp/api": {
           target: "https://preview.uniqcarttest.com",
           ws: true,
           /** 是否允许跨域 */
           changeOrigin: true
         },
-        "/ws": {
+        "/ws/myapp": {
           target: "http://preview.uniqcarttest.com",
           ws: true,
           /** 是否允许跨域 */
