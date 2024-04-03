@@ -22,11 +22,7 @@ export const useOrdersStore = defineStore("orders", () => {
     res.orderTime = formatDateTime(res.orderTime)
     res.payTime = formatDateTime(res.payTime)
 
-    if (["super-admin", "branch-admin"].includes(role.value)) {
-      orderListData.value.unshift(JSON.parse(JSON.stringify(res)))
-    } else if (["branch-backstage"].includes(role.value)) {
-      orderListData.value.push(JSON.parse(JSON.stringify(res)))
-    }
+    orderListData.value.push(JSON.parse(JSON.stringify(res)))
   }
   const cancelOrderNotification = (res: any) => {
     console.log("取消訂單通知:")
