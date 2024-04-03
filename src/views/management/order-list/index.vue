@@ -461,6 +461,11 @@ const { getOrderData } = useOrdersStore()
 getOrderData()
 
 const { visitedViews } = storeToRefs(useTagsViewStore())
+
+const refresh = () => {
+  getOrderData()
+  resetShortcuts()
+}
 //#endregion
 
 //#region 過濾
@@ -492,7 +497,7 @@ watch(
   filterListData,
   () => {
     paginationData.total = filterListData.value.length
-    paginationData.currentPage = 1
+    paginationData.currentPage = paginationData.currentPage > paginationData.total ? 1 : paginationData.currentPage
   },
   { immediate: true }
 )
@@ -576,7 +581,7 @@ watch(pagefilterListData, () => {
             <el-button type="primary" :icon="Download" circle />
           </el-tooltip> -->
           <el-tooltip content="刷新當前頁">
-            <el-button type="primary" :icon="RefreshRight" circle @click="getOrderData, resetShortcuts" />
+            <el-button type="primary" :icon="RefreshRight" circle @click="refresh" />
           </el-tooltip>
         </div>
       </div>
