@@ -10,6 +10,7 @@ export interface CreateReqData {
   origin?: string
   mealTextList?: string[]
   selectList?: Select.MealSelectReadData[]
+  deliveryPrice: number | undefined
   price: number | undefined
   count?: string
   mainMeal: boolean | undefined
@@ -30,6 +31,7 @@ export interface ReadData {
   origin: string
   mealTextList: string[]
   selectList: Select.MealSelectReadData[]
+  deliveryPrice: number
   price: number
   count: string
   mainMeal: boolean | undefined

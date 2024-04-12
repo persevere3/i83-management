@@ -46,7 +46,8 @@ const formRules: FormRules = reactive({
 const addFormDataOption = () => {
   formData.optionList.push({
     title: "",
-    price: 0,
+    deliverPrice: undefined,
+    price: undefined,
     codeName: ""
   })
 }
@@ -83,6 +84,9 @@ const handleConfirm = () => {
 
 //#region 增
 const handleCreate = () => {
+  formData.optionList.forEach((item, index) => {
+    item.order = index
+  })
   Select.createDataApi({
     id: 0,
     title: formData.name,
@@ -138,8 +142,9 @@ const handleUpdate = () => {
   if (!currentUpdateId.value) return
   const select = selectListData.value.find((item) => item.id === currentUpdateId.value)
   if (!select) return
-  formData.optionList.forEach((item) => {
+  formData.optionList.forEach((item, index) => {
     if (!item.codeName) item.codeName = ""
+    item.order = index
   })
   Select.updateDataApi({
     id: currentUpdateId.value,
@@ -237,17 +242,22 @@ const pagefilterListData = computed<ReadData[]>(() => {
           </el-tooltip>
         </div>
       </div>
-      <div class="table-wrapper">
+      <div class="table-wrapper select">
         <!-- 必須加 row-key hover sortable 才不會有bug -->
-        <el-table ref="tableRef" :data="pagefilterListData" row-key="id">
+        <el-table class="selectTable" ref="tableRef" :data="pagefilterListData" row-key="id">
           <el-table-column type="selection" width="50" align="center" />
-          <el-table-column prop="title" label="選擇名稱" align="center" />
+          <el-table-column prop="title" width="150" label="選擇名稱" align="center" />
           <el-table-column label="選項" align="left">
             <template #default="scope">
-              <span v-for="(item, index) in scope.row.optionList" :key="item"
-                >{{ index != 0 ? "，" : "" }} {{ item.title }}
-                <span v-if="item.optionPrice"> ({{ item.optionPrice }}) </span>
-              </span>
+              <el-table :data="scope.row.optionList" row-key="title">
+                <el-table-column prop="title" label="名稱" align="center" />
+                <el-table-column label="價格 / 外送價格" align="center">
+                  <template #default="scope2">
+                    <div>{{ scope2.row.price }} / {{ scope2.row.deliverPrice }}</div>
+                  </template>
+                </el-table-column>
+                <el-table-column prop="codeName" label="代號" align="center" />
+              </el-table>
             </template>
           </el-table-column>
           <el-table-column v-if="role === 'super-admin'" fixed="right" label="操作" width="150" align="center">
@@ -277,26 +287,33 @@ const pagefilterListData = computed<ReadData[]>(() => {
         <el-form-item prop="name" label="選擇名稱">
           <el-input v-model="formData.name" placeholder="請輸入選擇名稱" />
         </el-form-item>
-        <el-form-item prop="" label="選項(價錢)(代號)">
+        <el-form-item label="選項內容">
           <template v-for="(item, index) in formData.optionList" :key="index">
             <div class="mb-2">
               <el-input
                 class="mealText"
                 v-model="formData.optionList[index].title"
-                placeholder="請輸入選項"
+                placeholder="請輸入選項名稱"
                 style="width: 50%"
               />
               <el-input
                 type="number"
                 class="mealText"
-                v-model="formData.optionList[index].price"
+                v-model.number="formData.optionList[index].deliverPrice"
+                placeholder="請輸入外送價錢"
+                style="width: 50%"
+              />
+              <el-input
+                type="number"
+                class="mealText"
+                v-model.number="formData.optionList[index].price"
                 placeholder="請輸入價錢"
                 style="width: 50%"
               />
               <el-input
                 class="mealText"
                 v-model="formData.optionList[index].codeName"
-                placeholder="請輸入代號"
+                placeholder="請輸入選項代號"
                 style="width: 50%"
               />
 
@@ -360,5 +377,13 @@ const pagefilterListData = computed<ReadData[]>(() => {
 
 .el-input__inner {
   width: 50%;
+}
+</style>
+
+<style lang="scss">
+.selectTable {
+  .el-table__row {
+    cursor: grab;
+  }
 }
 </style>

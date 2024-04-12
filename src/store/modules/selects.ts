@@ -10,10 +10,11 @@ import Sortable from "sortablejs"
 export const useSelectsStore = defineStore("selects", () => {
   const loading = ref<boolean>(false)
   const selectListData = ref<ReadData[]>([])
+  const selectOrderObj = ref<any>({})
 
   //#region sort
   const initSort = () => {
-    const table: HTMLElement | null = document.querySelector(".el-table__body tbody")
+    const table: HTMLElement | null = document.querySelector(".select .el-table__body tbody")
     if (!table) return
 
     Sortable.create(table, {
@@ -23,6 +24,15 @@ export const useSelectsStore = defineStore("selects", () => {
         const { oldIndex, newIndex } = event
         const currentRow = selectListData.value?.splice(oldIndex, 1)[0]
         selectListData.value?.splice(newIndex, 0, currentRow)
+
+        selectOrderObj.value = {}
+        selectListData.value.forEach((item, index) => {
+          selectOrderObj.value[item.id] = index
+        })
+
+        Select.updateSelectOrderApi(selectOrderObj.value).then((res) => {
+          console.log(res)
+        })
       }
     })
   }
@@ -33,8 +43,8 @@ export const useSelectsStore = defineStore("selects", () => {
     Select.getDataApi()
       .then((res) => {
         selectListData.value = res
-        const f = false
-        if (f) initSort()
+        selectListData.value.sort((a, b) => a.order - b.order)
+        initSort()
       })
       .catch(() => {
         selectListData.value = []
@@ -44,7 +54,7 @@ export const useSelectsStore = defineStore("selects", () => {
       })
   }
 
-  return { loading, selectListData, getSelectData }
+  return { loading, selectListData, selectOrderObj, getSelectData }
 })
 
 /** 在 setup 外使用 */

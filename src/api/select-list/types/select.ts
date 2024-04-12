@@ -1,7 +1,9 @@
 export interface Option {
   title: string
   price: number | undefined
+  deliverPrice: number | undefined
   codeName: string | undefined
+  order?: number
 }
 
 export interface CreateReqData {
@@ -34,6 +36,7 @@ export interface ReadData {
   optionList: Option[]
   max: number
   min: number
+  order: number
 }
 
 export type ReadResData = ReadData[]

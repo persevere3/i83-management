@@ -28,6 +28,14 @@ export function updateDataApi(data: Select.UpdateReqData) {
   })
 }
 
+export function updateSelectOrderApi(data: any) {
+  return requestJson({
+    url: `Options/ModifyOptionOrder`,
+    method: "post",
+    data
+  })
+}
+
 /** 查 */
 export function getDataApi() {
   return requestJson<Select.ReadResData>({

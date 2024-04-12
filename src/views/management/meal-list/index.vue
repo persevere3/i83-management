@@ -49,19 +49,23 @@ watch(activeSelectIdList, (newData, originData) => {
       newItem = formData.selectList?.find((item2) => item2.id === item)
     } else {
       newItem = selectListData.value
-        ?.map((item3) => {
+        ?.map((item2) => {
           return {
-            id: item3.id,
-            selectName: item3.title,
+            id: item2.id,
+            selectName: item2.title,
             showOptionList: [],
-            max: item3.max,
-            min: item3.min
+            max: item2.max,
+            min: item2.min,
+            order: item2.order
           }
         })
         ?.find((item2) => item2.id === item)
     }
-    if (newItem) newFormdataSelectList.push(JSON.parse(JSON.stringify(newItem)))
+    if (newItem) {
+      newFormdataSelectList.push(JSON.parse(JSON.stringify(newItem)))
+    }
   })
+  newFormdataSelectList.sort((a: any, b: any) => a.order - b.order)
   formData.selectList = newFormdataSelectList
 })
 const formData = reactive<Omit<CreateReqData, "id">>({
@@ -71,6 +75,7 @@ const formData = reactive<Omit<CreateReqData, "id">>({
   origin: "",
   mealTextList: [],
   selectList: [],
+  deliveryPrice: undefined,
   price: undefined,
   count: "",
   mainMeal: false,
@@ -79,6 +84,7 @@ const formData = reactive<Omit<CreateReqData, "id">>({
 const formRules: any = reactive({
   mealName: [{ required: true, trigger: "blur", message: "請輸入餐點名稱" }],
   file: [{ required: true, trigger: "blur", message: "請上傳餐點圖片" }],
+  deliveryPrice: [{ required: true, trigger: "blur", message: "請輸入外送價錢" }],
   price: [{ required: true, trigger: "blur", message: "請輸入價錢" }]
 })
 const isFormdataReset = reactive<{ [propName: string]: boolean }>({
@@ -145,9 +151,11 @@ const openDialog = (row?: MealReadData, batchUpdate?: boolean) => {
 
     activeSelectIdList.value = row.selectList?.map((item) => item.id)
     setTimeout(() => {
+      console.log(row.selectList)
       formData.selectList = JSON.parse(JSON.stringify(row.selectList))
     }, 0)
 
+    formData.deliveryPrice = row.deliveryPrice
     formData.price = row.price
     formData.count = row.count
     formData.mainMeal = row.mainMeal
@@ -171,6 +179,7 @@ const openDialog = (row?: MealReadData, batchUpdate?: boolean) => {
 
     activeSelectIdList.value = []
 
+    formData.deliveryPrice = undefined
     formData.price = undefined
     formData.count = ""
 
@@ -230,7 +239,6 @@ const objToFormData = (obj: { [propName: string]: any }) => {
 
 //#region 增
 const handleCreate = () => {
-  console.log(formData)
   Meal.createDataApi(
     objToFormData({
       id: 0,
@@ -340,6 +348,7 @@ const handleBatchUpdate = () => {
       ? formData.selectList
       : item.selectList
     item.origin = isFormdataReset.origin ? "" : formData.origin ? formData.origin : item.origin
+    item.deliveryPrice = formData.deliveryPrice ? formData.deliveryPrice : item.deliveryPrice
     item.price = formData.price ? formData.price : item.price
     item.count = isFormdataReset.count ? "" : formData.count ? formData.count : item.count
 
@@ -594,8 +603,11 @@ const pagefilterListData = computed<MealReadData[]>(() => {
               <div v-for="item in scope.row.selectList" :key="item">- {{ item.selectName }}</div>
             </template>
           </el-table-column>
-          <el-table-column label="價錢" width="100" align="center">
-            <template #default="scope"> {{ thousandsSeparatorFormat(scope.row.price) }} </template>
+          <el-table-column label="價錢 / 外送價錢" width="100" align="center">
+            <template #default="scope">
+              <div>{{ thousandsSeparatorFormat(scope.row.price) }}</div>
+              <div>{{ thousandsSeparatorFormat(scope.row.deliveryPrice) }}</div>
+            </template>
           </el-table-column>
           <!-- <el-table-column label="數量" width="100" align="center">
             <template #default="scope"> {{ scope.row.count }} </template>
@@ -763,6 +775,9 @@ const pagefilterListData = computed<MealReadData[]>(() => {
             </div>
           </el-form-item>
         </template>
+        <el-form-item prop="deliveryPrice" label="外送價錢">
+          <el-input v-model="formData.deliveryPrice" placeholder="請輸入外送價錢" />
+        </el-form-item>
         <el-form-item prop="price" label="價錢">
           <el-input v-model="formData.price" placeholder="請輸入價錢" />
         </el-form-item>

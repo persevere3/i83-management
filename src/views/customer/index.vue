@@ -54,6 +54,10 @@ Table.getDataApi()
         :value="`https://preview.uniqcarttest.com/?tableId=${activeTable.id}`"
         :dotsOptions="{ type: 'classy' }"
       />
+
+      <div class="tableNumberContain">
+        <div class="tableNumber" v-if="activeTable">{{ activeTable.number }}</div>
+      </div>
     </el-card>
   </div>
 </template>
@@ -63,5 +67,20 @@ Table.getDataApi()
   display: flex;
   justify-content: center;
   align-items: center;
+  margin-bottom: 10px;
+}
+.tableNumberContain {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+
+  .tableNumber {
+    padding: 5px 10px;
+    font-size: 24px;
+    font-weight: bolder;
+    border-radius: 5px;
+    border: 1px solid #666;
+    color: #666;
+  }
 }
 </style>

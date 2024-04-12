@@ -127,6 +127,7 @@ const updateChannel = (channel: ReadData) => {
   .el-card__body {
     .enable {
       .img {
+        width: 200px;
         margin-right: 20px;
         position: relative;
 

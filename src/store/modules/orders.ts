@@ -49,14 +49,16 @@ export const useOrdersStore = defineStore("orders", () => {
               return {
                 title: item4.Title,
                 price: item4.Price,
-                codeName: item4.CodeName
+                codeName: item4.CodeName,
+                order: item4.Order
               }
             }),
             activeOptionList: item3.ActiveOptionList.map((item4: any) => {
               return {
                 title: item4.Title,
                 price: item4.Price,
-                codeName: item4.CodeName
+                codeName: item4.CodeName,
+                order: item4.Order
               }
             }),
             max: item3.Max,

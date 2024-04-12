@@ -1,6 +1,15 @@
 import { requestJson } from "@/utils/service"
 import type * as Order from "./types/order"
 
+/** 增 */
+export function createDataApi(data: Order.createReqData) {
+  return requestJson({
+    url: `OrderInfos/BackgroundOrder?storeName=${data.storeName}&tableNumber=${data.tableNumber}`,
+    method: "post",
+    data
+  })
+}
+
 /** 删 */
 export function deleteDataApi(ids: string[]) {
   return requestJson({
@@ -29,7 +38,7 @@ export function cancelDataApi(orderId: string) {
 /** 取得生日優惠的退款金額 */
 export function getBirthBonusPrice(orderId: string, birthdayCount: number) {
   return requestJson({
-    url: `OrderInfos/BirthdayBonusPrice/${orderId}?orderId=${orderId}&birthdayCount=${birthdayCount}`,
+    url: `OrderInfos/BirthdayBonusPrice/${orderId}?birthdayCount=${birthdayCount}`,
     method: "get"
   })
 }

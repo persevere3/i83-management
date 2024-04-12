@@ -14,28 +14,49 @@ export interface OrderMeal {
   mealName: string | ""
   price: number
   originPrice: number
-  count: string
+  count: string | number
   selectList: OrderSelect[]
+  mainMeal: boolean
   note: string
+}
+
+export interface createReqData {
+  storeName: string
+  tableNumber: string
+  birthdayBonus: number
+  deliveryType: number
+  birthdayAmount: number
+  discountAmount: number
+  payMethod: string
+  total: number
+  mealList: OrderMeal[]
 }
 
 export interface UpdateReqData {
   orderId: string
   storeName: string
   tableNumber: string
-  mealList: OrderMeal[]
-  total: number
+  deliveryType: number
+  birthdayBonus: number
+  birthdayAmount: number
+  discountAmount: number
   payMethod: string
+  total: number
+  mealList: OrderMeal[]
 }
 
 export interface ReadData {
   orderId: string
   storeName: string
   tableNumber: string
-  mealList: OrderMeal[]
-  payMethod: string
+  deliveryType: number
   birthdayBonus: number
+  birthdayAmount: number
+  discountAmount: number
+  payMethod: string
+  originTotal: number
   total: number
+  mealList: OrderMeal[]
   orderStatus: number
   orderTime: string
   payOrderId: string

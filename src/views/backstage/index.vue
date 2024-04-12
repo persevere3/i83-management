@@ -27,12 +27,12 @@ const logout = () => {
 }
 
 //#region 後台改變餐點狀態
-const preparingOrder = (orderId: string) => {
-  Order.preparingOrder(orderId).then(() => {
-    ElMessage.success(`${orderId} 開始備餐`)
-    getOrderData()
-  })
-}
+// const preparingOrder = (orderId: string) => {
+//   Order.preparingOrder(orderId).then(() => {
+//     ElMessage.success(`${orderId} 開始備餐`)
+//     getOrderData()
+//   })
+// }
 
 const doneOrder = (orderId: string) => {
   Order.doneOrder(orderId).then(() => {
@@ -63,7 +63,11 @@ const filterOrderListData = computed(() => {
       <el-button class="logoutBtn" type="info" @click="logout"> 登出 </el-button>
     </div>
     <div class="orderList">
-      <el-card v-for="item in filterOrderListData" :key="item.orderId">
+      <el-card
+        v-for="item in filterOrderListData"
+        :key="item.orderId"
+        :class="{ takeaway: item.deliveryType === 1 || item.deliveryType === 2 }"
+      >
         <div class="tableNumber">{{ item.tableNumber }}</div>
         <div class="payTime" v-if="item.payTime">{{ item.payTime.split(" ")[1] }}</div>
 
@@ -87,7 +91,7 @@ const filterOrderListData = computed(() => {
         </div>
 
         <div class="controlBtns">
-          <el-button
+          <!-- <el-button
             v-if="item.orderStatus === 1"
             type="warning"
             text
@@ -96,10 +100,9 @@ const filterOrderListData = computed(() => {
             @click="preparingOrder(item.orderId)"
           >
             開始備餐
-          </el-button>
-          <el-button v-if="item.orderStatus === 2" type="success" text bg size="large" @click="doneOrder(item.orderId)">
-            備餐完成
-          </el-button>
+          </el-button> -->
+          <!-- v-if="item.orderStatus === 2" -->
+          <el-button type="success" text bg size="large" @click="doneOrder(item.orderId)"> 備餐完成 </el-button>
         </div>
       </el-card>
     </div>
@@ -119,6 +122,10 @@ const filterOrderListData = computed(() => {
 
   .el-card {
     flex: 0 0 20%;
+
+    &.takeaway {
+      background: #ffd9e6 !important;
+    }
 
     .tableNumber {
       padding: 5px 10px;
